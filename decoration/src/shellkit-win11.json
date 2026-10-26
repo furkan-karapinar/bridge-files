@@ -1,0 +1,12 @@
+{
+    "KPlugin": {
+        "Description": "Windows 11 window frame (shellkit)",
+        "Id": "org.shellkit.win11",
+        "Name": "Windows 11 (shellkit)"
+    },
+    "org.kde.kdecoration3": {
+        "blur": false,
+        "kcmodule": false,
+        "recommendedBorderSize": "None"
+    }
+}

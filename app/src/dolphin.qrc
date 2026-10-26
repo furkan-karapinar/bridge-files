@@ -1,0 +1,7 @@
+<RCC>
+<qresource prefix="/kxmlgui5/shellkit-files">
+<file>dolphinui.rc</file>
+<file>dolphinui7.rc</file>
+<file>dolphinuiforphones.rc</file>
+</qresource>
+</RCC>

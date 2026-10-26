@@ -1,0 +1,406 @@
+# Turkish translation of the strings the shellkit File Explorer fork adds.
+# The strings inherited from Dolphin come from the system "dolphin" catalogue.
+msgid ""
+msgstr ""
+"Project-Id-Version: shellkit-files\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgctxt "@action:intoolbar Create a new folder, file, etc."
+msgid "New"
+msgstr "Yeni"
+
+msgctxt "@action:intoolbar"
+msgid "Sort"
+msgstr "Sırala"
+
+msgctxt "@action:intoolbar Layout of the files"
+msgid "View"
+msgstr "Görünüm"
+
+msgctxt "@action:intoolbar Details pane"
+msgid "Details"
+msgstr "Ayrıntılar"
+
+msgctxt "@action:intoolbar More commands"
+msgid "See more"
+msgstr "Daha fazlasını gör"
+
+msgctxt "@action:intoolbar"
+msgid "Spacer"
+msgstr "Boşluk"
+
+msgctxt "@label"
+msgid "Search"
+msgstr "Ara"
+
+msgctxt "@action:intoolbar"
+msgid "Search Box"
+msgstr "Arama kutusu"
+
+msgctxt "@info:placeholder %1 is the name of the current folder"
+msgid "Search %1"
+msgstr "%1 klasöründe ara"
+
+msgctxt "@title:window"
+msgid "Navigation pane"
+msgstr "Gezinti bölmesi"
+
+msgctxt "@label"
+msgid "Navigation pane"
+msgstr "Gezinti bölmesi"
+
+msgctxt "@item:inlistbox Start page of the file explorer"
+msgid "Home"
+msgstr "Giriş"
+
+msgctxt "@item:inlistbox Photo collection"
+msgid "Gallery"
+msgstr "Galeri"
+
+msgctxt "@item:inlistbox"
+msgid "This PC"
+msgstr "Bu bilgisayar"
+
+msgctxt "@item:inlistbox"
+msgid "Network"
+msgstr "Ağ"
+
+msgctxt "@item:inlistbox %1 is a mount point"
+msgid "Local Disk (%1)"
+msgstr "Yerel Disk (%1)"
+
+msgctxt "@info:tooltip"
+msgid "Display information about each item in the window"
+msgstr "Penceredeki her öğeyle ilgili bilgileri görüntüle"
+
+msgctxt "@info:tooltip"
+msgid "Display items by using large thumbnails"
+msgstr "Öğeleri büyük küçük resimlerle görüntüle"
+
+msgctxt "@info:status"
+msgid "%1 item"
+msgid_plural "%1 items"
+msgstr[0] "%1 öğe"
+msgstr[1] "%1 öğe"
+
+msgctxt "@info:status"
+msgid "%1 item selected"
+msgid_plural "%1 items selected"
+msgstr[0] "%1 öğe seçildi"
+msgstr[1] "%1 öğe seçildi"
+
+msgctxt "@item:intable Type of a folder"
+msgid "File folder"
+msgstr "Dosya klasörü"
+
+msgctxt "@title:group"
+msgid "Quick access"
+msgstr "Hızlı erişim"
+
+msgctxt "@title:group"
+msgid "Favorites"
+msgstr "Sık kullanılanlar"
+
+msgctxt "@title:group Recently opened files"
+msgid "Recent"
+msgstr "Son kullanılanlar"
+
+msgctxt "@info"
+msgid "Files you add to favorites will show up here."
+msgstr "Sık kullanılanlara eklediğiniz dosyalar burada gösterilir."
+
+msgctxt "@info"
+msgid "Files you open will show up here."
+msgstr "Açtığınız dosyalar burada gösterilir."
+
+msgctxt "@title:column"
+msgid "Date modified"
+msgstr "Değiştirme tarihi"
+
+msgctxt "@title:column"
+msgid "Date accessed"
+msgstr "Erişim tarihi"
+
+msgctxt "@title:column"
+msgid "File location"
+msgstr "Dosya konumu"
+
+msgctxt "@title:window"
+msgid "Tabs"
+msgstr "Sekmeler"
+
+msgctxt "@action:inmenu"
+msgid "Open"
+msgstr "Aç"
+
+msgctxt "@action:inmenu"
+msgid "Pin to Quick access"
+msgstr "Hızlı erişime sabitle"
+
+msgctxt "@action:inmenu"
+msgid "Unpin from Quick access"
+msgstr "Hızlı erişimden kaldır"
+
+msgctxt "@action:inmenu"
+msgid "Add to Favorites"
+msgstr "Sık kullanılanlara ekle"
+
+msgctxt "@action:inmenu"
+msgid "Remove from Favorites"
+msgstr "Sık kullanılanlardan kaldır"
+
+msgctxt "@action:inmenu"
+msgid "Remove from Recent"
+msgstr "Son kullanılanlardan kaldır"
+
+msgctxt "@action:inmenu"
+msgid "Compress to ZIP file"
+msgstr "ZIP dosyasına sıkıştır"
+
+msgctxt "@action:inmenu"
+msgid "Open file location"
+msgstr "Dosya konumunu aç"
+
+msgctxt "@action:inmenu"
+msgid "Show more options"
+msgstr "Diğer seçenekleri göster"
+
+msgctxt "@action:incontextmenu"
+msgid "Copy as path"
+msgstr "Yol olarak kopyala"
+
+msgctxt "@action:incontextmenu"
+msgid "Copy as path…"
+msgstr "Yol olarak kopyala…"
+
+msgctxt "@info:whatsthis copy_location"
+msgid "This copies the paths of the selected items into the clipboard."
+msgstr "Seçili öğelerin yollarını panoya kopyalar."
+
+msgctxt "@action:button"
+msgid "Pause"
+msgstr "Duraklat"
+
+msgctxt "@action:button"
+msgid "Resume"
+msgstr "Sürdür"
+
+msgctxt "@action:button"
+msgid "Cancel"
+msgstr "İptal"
+
+msgctxt "@action:button"
+msgid "More details"
+msgstr "Daha fazla ayrıntı"
+
+msgctxt "@action:button"
+msgid "Fewer details"
+msgstr "Daha az ayrıntı"
+
+msgctxt "@label Name of the file being copied"
+msgid "Name:"
+msgstr "Ad:"
+
+msgctxt "@label"
+msgid "Speed:"
+msgstr "Hız:"
+
+msgctxt "@label"
+msgid "Time remaining:"
+msgstr "Kalan süre:"
+
+msgctxt "@label"
+msgid "Items remaining:"
+msgstr "Kalan öğe:"
+
+msgctxt "@info"
+msgid "Moving %1 item from %2 to %3"
+msgid_plural "Moving %1 items from %2 to %3"
+msgstr[0] "%1 öğe %2 kaynağından %3 hedefine taşınıyor"
+msgstr[1] "%1 öğe %2 kaynağından %3 hedefine taşınıyor"
+
+msgctxt "@info"
+msgid "Copying %1 item from %2 to %3"
+msgid_plural "Copying %1 items from %2 to %3"
+msgstr[0] "%1 öğe %2 kaynağından %3 hedefine kopyalanıyor"
+msgstr[1] "%1 öğe %2 kaynağından %3 hedefine kopyalanıyor"
+
+msgctxt "@info %1 is a number"
+msgid "%1% complete"
+msgstr "%%1 tamamlandı"
+
+msgctxt "@info %1 is a number"
+msgid "%1% complete, paused"
+msgstr "%%1 tamamlandı, duraklatıldı"
+
+msgctxt "@info Transfer speed"
+msgid "%1/s"
+msgstr "%1/sn"
+
+msgctxt "@info Time remaining"
+msgid "About %1"
+msgstr "Yaklaşık %1"
+
+msgctxt "@info %1 is a number of files, %2 their size"
+msgid "%1 (%2)"
+msgstr "%1 (%2)"
+
+msgctxt "@item:intable File type"
+msgid "Text Document"
+msgstr "Metin Belgesi"
+
+msgctxt "@item:intable File type"
+msgid "Compressed (zipped) Folder"
+msgstr "Sıkıştırılmış (zip) Klasör"
+
+msgctxt "@item:intable Type of a file without extension"
+msgid "File"
+msgstr "Dosya"
+
+msgctxt "@item:intable %1 is a file extension such as PNG"
+msgid "%1 File"
+msgstr "%1 Dosyası"
+
+msgctxt "@item:intable File size in kilobytes"
+msgid "%1 KB"
+msgstr "%1 KB"
+
+msgctxt "@info:status"
+msgid "%1 byte"
+msgid_plural "%1 bytes"
+msgstr[0] "%1 bayt"
+msgstr[1] "%1 bayt"
+
+msgctxt "@info"
+msgid "Deleting %1 item from %2"
+msgid_plural "Deleting %1 items from %2"
+msgstr[0] "%1 öğe %2 konumundan siliniyor"
+msgstr[1] "%1 öğe %2 konumundan siliniyor"
+
+msgctxt "@info"
+msgid "This folder is empty."
+msgstr "Bu klasör boş."
+
+msgctxt "@info Details pane"
+msgid "Select a single file to get more information."
+msgstr "Daha fazla bilgi edinmek için tek bir dosya seçin."
+
+msgctxt "@label %2 is a folder name"
+msgid "%2 (%1 item)"
+msgid_plural "%2 (%1 items)"
+msgstr[0] "%2 (%1 öğe)"
+msgstr[1] "%2 (%1 öğe)"
+
+msgctxt "@option:check"
+msgid "Show copy progress in the classic layout"
+msgstr "Kopyalama ilerlemesini klasik düzende göster"
+
+msgctxt "@info Transfer speed in the graph"
+msgid "Speed: %1"
+msgstr "Hız: %1"
+
+msgctxt "@info Time remaining"
+msgid "Calculating..."
+msgstr "Hesaplanıyor..."
+
+msgctxt "@info %1 is a duration"
+msgid "%1 remaining"
+msgstr "%1 kaldı"
+
+msgctxt "@label Folder the files are copied from"
+msgid "From:"
+msgstr "Kaynak:"
+
+msgctxt "@label Folder the files are copied to"
+msgid "To:"
+msgstr "Hedef:"
+
+msgctxt "@info %2 is a size"
+msgid "Copying %1 item (%2)"
+msgid_plural "Copying %1 items (%2)"
+msgstr[0] "%1 öğe kopyalanıyor (%2)"
+msgstr[1] "%1 öğe kopyalanıyor (%2)"
+
+msgctxt "@info %2 is a size"
+msgid "Moving %1 item (%2)"
+msgid_plural "Moving %1 items (%2)"
+msgstr[0] "%1 öğe taşınıyor (%2)"
+msgstr[1] "%1 öğe taşınıyor (%2)"
+
+msgctxt "@info %2 is a size"
+msgid "Deleting %1 item (%2)"
+msgid_plural "Deleting %1 items (%2)"
+msgstr[0] "%1 öğe siliniyor (%2)"
+msgstr[1] "%1 öğe siliniyor (%2)"
+
+msgctxt "@info"
+msgid "Takes effect the next time File Explorer starts."
+msgstr "Dosya Gezgini bir sonraki açılışında uygulanır."
+
+msgctxt "@label:listbox"
+msgid "Look:"
+msgstr "Görünüm:"
+
+msgctxt "@label"
+msgid "Details pane"
+msgstr "Ayrıntılar bölmesi"
+
+msgctxt "@label"
+msgid "Date modified:"
+msgstr "Değiştirme tarihi:"
+
+msgctxt "@label"
+msgid "Size:"
+msgstr "Boyut:"
+
+msgctxt "@label"
+msgid "Date created:"
+msgstr "Oluşturma tarihi:"
+
+msgctxt "@label %1 and %2 are dates"
+msgid "%1 - %2"
+msgstr "%1 - %2"
+
+msgctxt "@action:inmenu Layout"
+msgid "Details pane"
+msgstr "Ayrıntılar bölmesi"
+
+msgctxt "@action:inmenu Layout"
+msgid "Preview pane"
+msgstr "Önizleme bölmesi"
+
+msgctxt "@action:intoolbar Windows 7 command bar menu"
+msgid "Organize"
+msgstr "Düzenle"
+
+msgctxt "@title:menu Which panes the window shows"
+msgid "Layout"
+msgstr "Düzen"
+
+msgctxt "@action:inmenu Close the window"
+msgid "Close"
+msgstr "Kapat"
+
+msgctxt "@action:intoolbar"
+msgid "New folder"
+msgstr "Yeni klasör"
+
+msgctxt "@item:inlistbox Windows 7 navigation pane group"
+msgid "Favorites"
+msgstr "Sık Kullanılanlar"
+
+msgctxt "@item:inlistbox Recently used folders"
+msgid "Recent Places"
+msgstr "Son Yerler"
+
+msgctxt "@item:inlistbox Windows 7 navigation pane group"
+msgid "Libraries"
+msgstr "Kitaplıklar"
+
+msgctxt "@item:inlistbox"
+msgid "Computer"
+msgstr "Bilgisayar"
