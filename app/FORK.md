@@ -199,3 +199,26 @@ release and apply that diff here; the fork's own changes are listed below.
   `changeEvent()` rebuilds the tree on a palette change (both looks), so tinted icons follow the scheme.
 - Win7 menus come from the style (square grey panel, icon column line, blue hover box).
 - `dolphinitemlistview.cpp`: 22 px details rows; `copyprogressdialog.cpp`: always the classic dialog.
+
+### This PC and Network pages
+
+- `shellkit.h`: `shellkitThisPcUrl()` (`shellkit-thispc:/`, titled "Computer" in the Windows 7 look),
+  `shellkitNetworkUrl()` (`shellkit-network:/`) and `isShellkitPageUrl()`, which replaces
+  `isShellkitHomeUrl()` wherever any page is meant (`changeUrl`, search, the view's status text).
+- `pages/shellkitpage.h`: the base of `HomePage`, `ThisPcPage` and `NetworkPage` (`refresh()`,
+  `itemCount()`, `folderActivated`, `folderInNewTab`, `itemCountChanged`).
+  `DolphinViewContainer::setPageShown(url)` replaces `setHomePageShown(bool)` and makes each page
+  the first time it is shown.
+- `pages/tilesection.*`: a folding section of tiles (icon, name, optional capacity bar, grey lines).
+- `pages/thispcpage.*`: "Devices and drives": the root file system first, then the places
+  model's drives with free space (`QStorageInfo`); opening a drive that is not mounted mounts it
+  first (`requestSetup`); the menu offers Unmount/Eject from the places model.
+  `ThisPcPage::driveName()` ("Label (mount point)", "Local Disk (mount point)") also names the
+  drives in the navigation pane, which always shows "Local Disk (/)" first and opens This PC on
+  the first build.
+- `pages/networkpage.*`: adapters (`QNetworkInterface`), the default gateway (`/proc/net/route`),
+  computers, media devices, printers and other devices from `avahi-browse --all --resolve
+  --parsable --terminate` and the neighbour table (`/proc/net/arp`). A computer opens `smb:/` or
+  `sftp:/`, a device its web page in the browser, an adapter Plasma's network settings. Needs
+  `Qt6::Network` (top `CMakeLists.txt`, `dolphinstatic`).
+- `dolphintabwidget.cpp`: tab icons of the pages.

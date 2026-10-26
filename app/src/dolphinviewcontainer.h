@@ -37,6 +37,9 @@ class Bar;
 }
 class DolphinStatusBar;
 class HomePage;
+class NetworkPage;
+class ShellkitPage;
+class ThisPcPage;
 class KFileItemList;
 namespace SelectionMode
 {
@@ -424,8 +427,8 @@ private Q_SLOTS:
     /** Requests the focus for the view \a m_view. */
     void requestFocus();
 
-    /** shellkit fork: shows the Home page in place of the view, or the view again. */
-    void setHomePageShown(bool shown);
+    /** shellkit fork: shows the page of  pageUrl in place of the view, or the view again for an empty URL. */
+    void setPageShown(const QUrl &pageUrl);
 
     /**
      * Stops the loading of a directory. Is connected with the "stopPressed" signal
@@ -530,11 +533,15 @@ private:
 
     DolphinView *m_view;
 
-    /** shellkit fork: the Home page, shown in place of m_view for shellkitHomeUrl(). */
+    /** shellkit fork: the Home, This PC and Network pages, shown in place of m_view (isShellkitPageUrl()). */
     HomePage *m_homePage = nullptr;
-    bool m_homePageShown = false;
-    /** shellkit fork: the search was started on the Home page, leaving it goes back there. */
-    bool m_searchFromHome = false;
+    ThisPcPage *m_thisPcPage = nullptr;
+    NetworkPage *m_networkPage = nullptr;
+    /** The page shown, or null for the view, and the URL it was opened with. */
+    ShellkitPage *m_page = nullptr;
+    QUrl m_pageUrl;
+    /** shellkit fork: the page the search was started on, leaving the search goes back there. */
+    QUrl m_searchFromPage;
     /** shellkit fork: the status bar lives in the main window (takeStatusBar()). */
     bool m_statusBarTaken = false;
 

@@ -495,8 +495,8 @@ void DolphinMainWindow::pasteIntoFolder()
 
 void DolphinMainWindow::changeUrl(const QUrl &url)
 {
-    // shellkit fork: the Home page is no listable folder but still a place to go to.
-    const bool homePage = isShellkitHomeUrl(url);
+    // shellkit fork: the pages are no listable folders but still places to go to.
+    const bool homePage = isShellkitPageUrl(url);
     if (!homePage && !KProtocolManager::supportsListing(url)) {
         // The URL navigator only checks for validity, not
         // if the URL can be listed. An error message is

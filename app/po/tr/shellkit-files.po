@@ -404,3 +404,87 @@ msgstr "Kitaplıklar"
 msgctxt "@item:inlistbox"
 msgid "Computer"
 msgstr "Bilgisayar"
+
+msgctxt "@title:group"
+msgid "Devices and drives"
+msgstr "Aygıtlar ve sürücüler"
+
+msgctxt "@info Free space of a drive"
+msgid "%1 free of %2"
+msgstr "%1 boş / %2"
+
+msgctxt "@item:inlistbox %1 is the label of a drive, %2 its mount point"
+msgid "%1 (%2)"
+msgstr "%1 (%2)"
+
+msgctxt "@item:inlistbox %1 is a mount point"
+msgid "USB Drive (%1)"
+msgstr "USB Sürücüsü (%1)"
+
+msgctxt "@title:group"
+msgid "Network adapters"
+msgstr "Ağ bağdaştırıcıları"
+
+msgctxt "@title:group"
+msgid "Network infrastructure"
+msgstr "Ağ altyapısı"
+
+msgctxt "@title:group"
+msgid "Computers"
+msgstr "Bilgisayarlar"
+
+msgctxt "@title:group"
+msgid "Media devices"
+msgstr "Medya aygıtları"
+
+msgctxt "@title:group"
+msgid "Printers"
+msgstr "Yazıcılar"
+
+msgctxt "@title:group"
+msgid "Other devices"
+msgstr "Diğer aygıtlar"
+
+msgctxt "@info State of a network adapter"
+msgid "Not connected"
+msgstr "Bağlı değil"
+
+msgctxt "@info State of a network adapter"
+msgid "Connected"
+msgstr "Bağlı"
+
+msgctxt "@info %1 is an IP address"
+msgid "Connected, %1"
+msgstr "Bağlı, %1"
+
+msgctxt "@item The default gateway of the network"
+msgid "Router"
+msgstr "Yönlendirici"
+
+msgctxt "@info %1 is the name of a network adapter"
+msgid "Gateway of %1"
+msgstr "%1 ağ geçidi"
+
+msgctxt "@info"
+msgid "Devices that announce themselves on the network are not shown, because avahi-browse is not installed (package avahi-tools)."
+msgstr "Ağda kendini duyuran aygıtlar gösterilmiyor, çünkü avahi-browse kurulu değil (avahi-tools paketi)."
+
+msgctxt "@info"
+msgid "Searching for devices on the network…"
+msgstr "Ağdaki aygıtlar aranıyor…"
+
+msgctxt "@info"
+msgid "No other devices were found on the network."
+msgstr "Ağda başka aygıt bulunamadı."
+
+msgctxt "@action:inmenu"
+msgid "Network settings"
+msgstr "Ağ ayarları"
+
+msgctxt "@action:inmenu"
+msgid "View device webpage"
+msgstr "Aygıt web sayfasını görüntüle"
+
+msgctxt "@action:inmenu"
+msgid "Copy IP address"
+msgstr "IP adresini kopyala"

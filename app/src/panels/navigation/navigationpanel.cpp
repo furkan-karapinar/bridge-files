@@ -7,6 +7,7 @@
 #include "navigationpanel.h"
 
 #include "dolphinplacesmodelsingleton.h"
+#include "pages/thispcpage.h"
 #include "shellkit.h"
 
 #include <KFilePlacesModel>
@@ -345,18 +346,19 @@ void NavigationPanel::rebuild()
     addPinnedFolders();
     addSeparator();
 
-    // This PC has no page of its own yet and opens the root folder.
     QStandardItem *thisPc =
-        addItem(nullptr, QIcon::fromTheme(QStringLiteral("computer")), i18ndc(shellkitDomain, "@item:inlistbox", "This PC"), QUrl::fromLocalFile(QStringLiteral("/")), false);
+        addItem(nullptr, QIcon::fromTheme(QStringLiteral("computer")), i18ndc(shellkitDomain, "@item:inlistbox", "This PC"), shellkitThisPcUrl(), false);
     addDrives(thisPc);
     thisPc->setData(true, PopulatedRole);
 
-    addItem(nullptr, QIcon::fromTheme(QStringLiteral("network-workgroup")), i18ndc(shellkitDomain, "@item:inlistbox", "Network"), QUrl(QStringLiteral("remote:/")), false);
+    addItem(nullptr, QIcon::fromTheme(QStringLiteral("network-workgroup")), i18ndc(shellkitDomain, "@item:inlistbox", "Network"), shellkitNetworkUrl(), false);
 
     // Expanding re-populates through slotExpanded(), which expands remembered children in turn.
+    // This PC starts open, so the root folder is in sight.
     for (int row = 0; row < m_model->rowCount(); ++row) {
         const QModelIndex index = m_model->index(row, 0);
-        if (m_expandedUrls.contains(index.data(UrlRole).toUrl()) && m_model->hasChildren(index)) {
+        const QUrl url = index.data(UrlRole).toUrl();
+        if (((firstBuild && url == shellkitThisPcUrl()) || m_expandedUrls.contains(url)) && m_model->hasChildren(index)) {
             m_view->expand(index);
         }
     }
@@ -400,12 +402,12 @@ void NavigationPanel::rebuildWin7(bool firstBuild)
     addSeparator();
 
     QStandardItem *computer =
-        addItem(nullptr, QIcon::fromTheme(QStringLiteral("computer")), i18ndc(shellkitDomain, "@item:inlistbox", "Computer"), QUrl::fromLocalFile(QStringLiteral("/")), false);
+        addItem(nullptr, QIcon::fromTheme(QStringLiteral("computer")), i18ndc(shellkitDomain, "@item:inlistbox", "Computer"), shellkitThisPcUrl(), false);
     addDrives(computer);
     computer->setData(true, PopulatedRole);
     addSeparator();
 
-    addItem(nullptr, QIcon::fromTheme(QStringLiteral("network-workgroup")), i18ndc(shellkitDomain, "@item:inlistbox", "Network"), QUrl(QStringLiteral("remote:/")), false);
+    addItem(nullptr, QIcon::fromTheme(QStringLiteral("network-workgroup")), i18ndc(shellkitDomain, "@item:inlistbox", "Network"), shellkitNetworkUrl(), false);
 
     // The groups start open, as in Windows 7; later rebuilds keep what the user opened.
     for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -437,8 +439,12 @@ void NavigationPanel::addPinnedFolders(QStandardItem *parent)
 
 void NavigationPanel::addDrives(QStandardItem *thisPc)
 {
+    // The root file system first, as C: on Windows; the drives as the This PC page names them.
+    addItem(thisPc,
+            QIcon::fromTheme(QStringLiteral("drive-harddisk")),
+            i18ndc(shellkitDomain, "@item:inlistbox %1 is a mount point", "Local Disk (%1)", QStringLiteral("/")),
+            QUrl::fromLocalFile(QStringLiteral("/")));
     KFilePlacesModel *places = DolphinPlacesModelSingleton::instance().placesModel();
-    bool hasRoot = false;
     for (int row = 0; row < places->rowCount(); ++row) {
         const QModelIndex index = places->index(row, 0);
         const auto group = places->groupType(index);
@@ -446,16 +452,11 @@ void NavigationPanel::addDrives(QStandardItem *thisPc)
             continue;
         }
         const QUrl url = places->url(index);
-        hasRoot = hasRoot || url.path() == QLatin1String("/");
-        QStandardItem *drive = addItem(thisPc, places->icon(index), places->text(index), url);
+        if (url.isLocalFile() && url.toLocalFile() == QLatin1String("/")) {
+            continue;
+        }
+        QStandardItem *drive = addItem(thisPc, places->icon(index), ThisPcPage::driveName(places, index), url);
         drive->setData(places->deviceForIndex(index).udi(), UdiRole);
-    }
-    if (!hasRoot) {
-        QStandardItem *root = addItem(thisPc,
-                                      QIcon::fromTheme(QStringLiteral("drive-harddisk")),
-                                      i18ndc(shellkitDomain, "@item:inlistbox %1 is a mount point", "Local Disk (%1)", QStringLiteral("/")),
-                                      QUrl::fromLocalFile(QStringLiteral("/")));
-        thisPc->insertRow(0, thisPc->takeRow(root->row()));
     }
 }
 
@@ -568,7 +569,7 @@ void NavigationPanel::showContextMenu(const QPoint &pos)
     menu.addAction(QIcon::fromTheme(QStringLiteral("window-new")), i18nc("@action:inmenu", "Open in New Window"), this, [this, url]() {
         Q_EMIT folderInNewWindow(url);
     });
-    if (!isShellkitHomeUrl(url)) {
+    if (!isShellkitPageUrl(url)) {
         menu.addSeparator();
         menu.addAction(QIcon::fromTheme(QStringLiteral("document-properties")), i18nc("@action:inmenu", "Properties"), this, [this, url]() {
             KPropertiesDialog::showDialog(url, this);

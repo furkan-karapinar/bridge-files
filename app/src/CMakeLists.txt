@@ -316,6 +316,9 @@ target_sources(dolphinstatic PRIVATE
     panels/navigation/navigationpanel.cpp
     win7detailspane.cpp
     homepage/homepage.cpp
+    pages/networkpage.cpp
+    pages/thispcpage.cpp
+    pages/tilesection.cpp
     shellkitcontextmenu.cpp
     panels/terminal/terminalpanel.cpp
     search/bar.cpp
@@ -389,6 +392,10 @@ target_sources(dolphinstatic PRIVATE
     panels/navigation/navigationpanel.h
     win7detailspane.h
     homepage/homepage.h
+    pages/networkpage.h
+    pages/shellkitpage.h
+    pages/thispcpage.h
+    pages/tilesection.h
     shellkitcontextmenu.h
     panels/terminal/terminalpanel.h
     search/bar.h
@@ -495,6 +502,7 @@ target_sources(dolphinstatic PRIVATE
 
 target_link_libraries(dolphinstatic
     dolphinprivate
+    Qt6::Network # shellkit fork: the Network page
     KF6::CoreAddons
     KF6::GuiAddons
     KF6::KCMUtils

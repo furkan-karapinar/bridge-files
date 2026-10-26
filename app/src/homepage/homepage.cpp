@@ -179,7 +179,7 @@ QLabel *newEmptyLabel(const QString &text, QWidget *parent)
 }
 
 HomePage::HomePage(QWidget *parent)
-    : QScrollArea(parent)
+    : ShellkitPage(parent)
     , m_quickAccess(nullptr)
     , m_quickAccessModel(new QStandardItemModel(this))
     , m_favorites(nullptr)
@@ -294,7 +294,7 @@ bool HomePage::eventFilter(QObject *watched, QEvent *event)
             }
         }
     }
-    return QScrollArea::eventFilter(watched, event);
+    return ShellkitPage::eventFilter(watched, event);
 }
 
 void HomePage::addSection(QVBoxLayout *layout, const QString &title, QWidget *body, QLabel *emptyLabel)

@@ -896,6 +896,12 @@ QIcon DolphinTabWidget::tabIcon(const QUrl &url)
     if (isShellkitHomeUrl(url)) {
         return QIcon::fromTheme(QStringLiteral("user-home"));
     }
+    if (url.scheme() == QLatin1String("shellkit-thispc")) {
+        return QIcon::fromTheme(QStringLiteral("computer"));
+    }
+    if (url.scheme() == QLatin1String("shellkit-network")) {
+        return QIcon::fromTheme(QStringLiteral("network-workgroup"));
+    }
     // ensure the path url ends with a slash to have proper folder icon for remote folders
     const QUrl pathUrl = QUrl(url.adjusted(QUrl::StripTrailingSlash).toString(QUrl::FullyEncoded).append("/"));
     return QIcon::fromTheme(KIO::iconNameForUrl(pathUrl));

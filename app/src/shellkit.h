@@ -153,6 +153,33 @@ inline QUrl shellkitStartUrl()
     return shellkitWin7() ? QUrl::fromLocalFile(QDir::homePath()) : shellkitHomeUrl();
 }
 
+/** "This PC" (Windows 7: "Computer"): the drives, as tiles with their free space. */
+inline QUrl shellkitThisPcUrl()
+{
+    QUrl url(QStringLiteral("shellkit-thispc:/"));
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("title"),
+                       shellkitWin7() ? i18ndc(shellkitDomain, "@item:inlistbox", "Computer") : i18ndc(shellkitDomain, "@item:inlistbox", "This PC"));
+    url.setQuery(query);
+    return url;
+}
+
+/** "Network": the network adapters, the gateway and the devices found on the network. */
+inline QUrl shellkitNetworkUrl()
+{
+    QUrl url(QStringLiteral("shellkit-network:/"));
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("title"), i18ndc(shellkitDomain, "@item:inlistbox", "Network"));
+    url.setQuery(query);
+    return url;
+}
+
+/** The Home, This PC and Network pages, which DolphinViewContainer shows in place of the view. */
+inline bool isShellkitPageUrl(const QUrl &url)
+{
+    return isShellkitHomeUrl(url) || url.scheme() == QLatin1String("shellkit-thispc") || url.scheme() == QLatin1String("shellkit-network");
+}
+
 /** "Copy as path": every path in quotes, one per line, as Windows does. */
 inline QString shellkitPathText(const QList<QUrl> &urls)
 {

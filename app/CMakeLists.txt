@@ -60,6 +60,7 @@ find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
     Widgets
     Gui
     DBus
+    Network # shellkit fork: the Network page
 )
 
 if (Qt6Gui_VERSION VERSION_GREATER_EQUAL "6.10.0")

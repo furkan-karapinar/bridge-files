@@ -29,6 +29,8 @@ own app id and its own launcher, called **File Explorer**.
 |---|---|
 | ![Copy dialog with speed graph](screenshots/copy-win11.png) | ![Classic copy dialog](screenshots/copy-classic.png) |
 
+![This PC page with drive tiles](screenshots/this-pc.png)
+
 The screenshots show the Turkish interface. Every string of the app is in English, with a full
 Turkish translation.
 
@@ -39,8 +41,16 @@ Turkish translation.
 - Tabs in the title bar, with a "+" button and the window buttons on the same row.
 - An address row with back, forward, up and refresh, a breadcrumb path, and a search box.
 - A command bar: New, Cut, Copy, Paste, Rename, Delete, Sort, View, "See more" and Details.
-- A navigation pane with Home, Gallery, pinned folders, This PC and Network.
+- A navigation pane with Home, Gallery, pinned folders, This PC (with "Local Disk (/)", the root
+  folder, always first) and Network.
 - A Home page with Quick access, Favorites and Recent files.
+- A This PC page: "Devices and drives" as tiles with a capacity bar and "X GB free of Y GB". A drive
+  that is not mounted yet is mounted when you open it; removable drives can be ejected from the
+  right-click menu.
+- A Network page: your network adapters (state, IP and MAC address), the router, and the
+  computers, media devices, printers and other devices on your network. A double click opens a
+  computer's shared files (SMB or SFTP) or a device's web page. Devices are found through
+  avahi (DNS-SD), so install `avahi-tools` if the page says it is missing.
 - The details view opens by default, with Name, Date modified, Type and Size columns, and type
   names you know ("File folder", "Text Document", "Compressed (zipped) Folder").
 - A short right-click menu with the common actions in an icon row at the top, and "Copy as path"
@@ -55,7 +65,8 @@ Settings > Interface > Folders & Tabs > Look: Windows 7. It takes effect the nex
 Explorer starts.
 
 - Glass title area, round back and forward buttons, and an Organize menu with New folder.
-- A navigation pane grouped into Favorites, Libraries, Computer and Network.
+- A navigation pane grouped into Favorites, Libraries, Computer and Network. Computer opens the
+  same drives page, titled Computer.
 - Windows 7 selection boxes, column headers and menus.
 - A details pane below the files, and the classic copy window.
 
@@ -122,6 +133,8 @@ The app itself follows your system colours, icons and fonts.
 ## Known limitations
 
 - Some KDE dialogs (Properties, the settings window) keep their KDE layout.
+- The Network page sees only devices that announce themselves over mDNS/DNS-SD or that talked
+  to your computer lately. Windows PCs show up only if they announce themselves that way.
 - "Copy to" and some deletions outside the file view still report progress as a Plasma
   notification instead of the copy window.
 - In the Windows 7 look, the preview pane keeps the Dolphin layout and Libraries are your user

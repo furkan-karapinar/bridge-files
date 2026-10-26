@@ -29,6 +29,8 @@ Sistemdeki Dolphin'in yanına kurulur ve ona dokunmaz. Ayar dosyası, uygulama k
 |---|---|
 | ![Hız grafikli kopyalama penceresi](screenshots/copy-win11.png) | ![Klasik kopyalama penceresi](screenshots/copy-classic.png) |
 
+![Sürücü kutucuklarıyla Bu bilgisayar sayfası](screenshots/this-pc.png)
+
 ## Dolphin'den farkı
 
 **Windows 11 görünümü (varsayılan)**
@@ -37,8 +39,16 @@ Sistemdeki Dolphin'in yanına kurulur ve ona dokunmaz. Ayar dosyası, uygulama k
 - Adres satırında geri, ileri, yukarı ve yenile düğmeleri, tıklanabilir yol ve arama kutusu var.
 - Komut çubuğunda Yeni, Kes, Kopyala, Yapıştır, Yeniden adlandır, Sil, Sırala, Görünüm,
   "Daha fazlasını gör" ve Ayrıntılar düğmeleri var.
-- Gezinti bölmesinde Giriş, Galeri, sabitlenmiş klasörler, Bu bilgisayar ve Ağ bulunur.
+- Gezinti bölmesinde Giriş, Galeri, sabitlenmiş klasörler, Bu bilgisayar ve Ağ bulunur. Bu
+  bilgisayarın altında kök klasör "Yerel Disk (/)" her zaman ilk sıradadır.
 - Giriş sayfasında Hızlı erişim, Sık kullanılanlar ve Son kullanılanlar bulunur.
+- Bu bilgisayar sayfasında "Aygıtlar ve sürücüler" kutucuklar hâlinde durur. Her kutucukta
+  doluluk çubuğu ve "X GB boş / Y GB" yazısı vardır. Bağlı olmayan bir sürücü açılınca bağlanır.
+  Çıkarılabilir sürücüler sağ tık menüsünden çıkarılır.
+- Ağ sayfasında ağ bağdaştırıcıların (durum, IP ve MAC adresi), yönlendirici ve ağdaki
+  bilgisayarlar, medya aygıtları, yazıcılar ve diğer aygıtlar görünür. Çift tıklayınca bir
+  bilgisayarın paylaşılan klasörleri (SMB ya da SFTP) ya da bir aygıtın web sayfası açılır.
+  Aygıtlar avahi (DNS-SD) ile bulunur. Sayfa eksik derse `avahi-tools` paketini kur.
 - Klasörler varsayılan olarak ayrıntılar görünümünde açılır. Ad, Değiştirme tarihi, Tür ve Boyut
   sütunları gösterilir. Tür adları alıştığın gibidir: "Dosya klasörü", "Metin Belgesi",
   "Sıkıştırılmış (zip) Klasör".
@@ -56,6 +66,7 @@ açılışında uygulanır.
 - Cam görünümlü başlık alanı, yuvarlak geri ve ileri düğmeleri var. Düzenle menüsü ve Yeni klasör
   düğmesi de bulunur.
 - Gezinti bölmesi Sık Kullanılanlar, Kitaplıklar, Bilgisayar ve Ağ gruplarına ayrılır.
+  Bilgisayar aynı sürücü sayfasını "Bilgisayar" başlığıyla açar.
 - Seçim kutuları, sütun başlıkları ve menüler Windows 7'deki gibidir.
 - Dosyaların altında ayrıntılar bölmesi bulunur. Kopyalama penceresi klasik düzendedir.
 
@@ -126,6 +137,8 @@ Uygulamanın kendisi sistemindeki renkleri, simgeleri ve yazı tiplerini kullan�
 ## Bilinen eksikler
 
 - Bazı KDE pencereleri (Özellikler, ayarlar penceresi) KDE düzeninde kalır.
+- Ağ sayfası yalnız kendini mDNS/DNS-SD ile duyuran ya da bilgisayarınla yakın zamanda konuşan
+  aygıtları görür. Windows bilgisayarlar ancak kendilerini bu yolla duyururlarsa görünür.
 - "Şuraya kopyala" ve dosya görünümü dışındaki bazı silmelerin ilerlemesi kopyalama penceresi
   yerine Plasma bildiriminde görünür.
 - Windows 7 görünümünde önizleme bölmesi Dolphin düzenindedir. Kitaplıklar gerçek kitaplık

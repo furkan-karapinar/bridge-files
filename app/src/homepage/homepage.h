@@ -7,8 +7,9 @@
 #ifndef HOMEPAGE_H
 #define HOMEPAGE_H
 
+#include "pages/shellkitpage.h"
+
 #include <QList>
-#include <QScrollArea>
 #include <QUrl>
 
 #include <functional>
@@ -28,7 +29,7 @@ class QVBoxLayout;
  * collapsible sections: Quick access (the pinned folders), Favorites (files the user
  * favorited, stored in the "Home" group of the config) and Recent (recently-used.xbel).
  */
-class HomePage : public QScrollArea
+class HomePage : public ShellkitPage
 {
     Q_OBJECT
 
@@ -36,14 +37,11 @@ public:
     explicit HomePage(QWidget *parent = nullptr);
 
     /** Reads the pinned folders, favorites and recent files again. */
-    void refresh();
+    void refresh() override;
 
-    /** Number of items on the page, for the status bar. */
-    int itemCount() const;
+    int itemCount() const override;
 
 Q_SIGNALS:
-    void folderActivated(const QUrl &url);
-    void folderInNewTab(const QUrl &url);
     /** "Open file location": show the folder of  fileUrl with the file selected. */
     void fileLocationRequested(const QUrl &fileUrl);
 

@@ -18,6 +18,8 @@
 #include "filterbar/filterbar.h"
 #include "global.h"
 #include "homepage/homepage.h"
+#include "pages/networkpage.h"
+#include "pages/thispcpage.h"
 #include "shellkit.h"
 #include "kitemviews/kitemlistcontainer.h"
 #include "search/bar.h"
@@ -120,8 +122,8 @@ DolphinViewContainer::DolphinViewContainer(const QUrl &url, QWidget *parent)
     connect(m_filterBar, &FilterBar::focusViewRequest, this, &DolphinViewContainer::requestFocus);
 
     // Initialize the main view
-    // shellkit fork: the Home page has no folder; the view waits in the home folder behind it.
-    m_view = new DolphinView(isShellkitHomeUrl(url) ? QUrl::fromLocalFile(QDir::homePath()) : url, this);
+    // shellkit fork: the pages have no folder; the view waits in the home folder behind them.
+    m_view = new DolphinView(isShellkitPageUrl(url) ? QUrl::fromLocalFile(QDir::homePath()) : url, this);
     connect(m_view, &DolphinView::urlChanged, m_filterBar, &FilterBar::clearIfUnlocked);
     connect(m_view, &DolphinView::urlChanged, m_messageWidget, &KMessageWidget::hide);
     // m_urlNavigator stays in sync with m_view's location changes and
@@ -158,8 +160,8 @@ DolphinViewContainer::DolphinViewContainer(const QUrl &url, QWidget *parent)
     connect(m_view, &DolphinView::operationCompletedMessage, m_statusBar, &DolphinStatusBar::setTemporaryRichText);
     connect(m_view, &DolphinView::showTypeAheadFeedback, m_statusBar, &DolphinStatusBar::setTemporaryRichText);
     connect(m_view, &DolphinView::statusBarTextChanged, this, [this](const QString &text) {
-        // shellkit fork: the hidden view behind the Home page keeps quiet.
-        if (!m_homePageShown) {
+        // shellkit fork: the hidden view behind a page keeps quiet.
+        if (!m_page) {
             m_statusBar->setDefaultText(text);
         }
     });
@@ -235,8 +237,8 @@ DolphinViewContainer::DolphinViewContainer(const QUrl &url, QWidget *parent)
     m_view->setFilterMode(m_filterBar->filterMode());
     m_view->setFilterCaseSensitive(m_filterBar->isCaseSensitive());
 
-    if (isShellkitHomeUrl(url)) {
-        setHomePageShown(true);
+    if (isShellkitPageUrl(url)) {
+        setPageShown(url);
     }
 }
 
@@ -258,8 +260,8 @@ DolphinStatusBar *DolphinViewContainer::takeStatusBar()
 
 QUrl DolphinViewContainer::url() const
 {
-    if (m_homePageShown) {
-        return shellkitHomeUrl();
+    if (m_page) {
+        return m_pageUrl;
     }
     return m_view->url();
 }
@@ -368,10 +370,10 @@ void DolphinViewContainer::disconnectUrlNavigator()
 
 namespace
 {
-// shellkit fork: the Home page is not a folder; searching there searches the home folder.
+// shellkit fork: the pages are no folders; searching there searches the home folder.
 QUrl searchableUrl(const QUrl &url)
 {
-    return isShellkitHomeUrl(url) ? QUrl::fromLocalFile(QDir::homePath()) : url;
+    return isShellkitPageUrl(url) ? QUrl::fromLocalFile(QDir::homePath()) : url;
 }
 }
 
@@ -387,8 +389,8 @@ void DolphinViewContainer::setSearchBarVisible(bool visible)
     if (!m_searchBar) {
         m_searchBar = new Search::Bar(std::make_shared<const Search::DolphinQuery>(searchableUrl(m_urlNavigator->locationUrl()), QUrl{} /** will be set below. */), this);
         connect(m_searchBar, &Search::Bar::urlChangeRequested, this, [this](QUrl url) {
-            if (m_searchFromHome && !isSearchUrl(url)) {
-                url = shellkitHomeUrl();
+            if (m_searchFromPage.isValid() && !isSearchUrl(url)) {
+                url = m_searchFromPage;
             }
             m_view->setViewPropertiesContext(isSearchUrl(url) ? QStringLiteral("search") : QString());
             setGrabFocusOnUrlChange(false); // Prevent loss of focus while typing or refining a search.
@@ -413,7 +415,8 @@ void DolphinViewContainer::setSearchBarVisible(bool visible)
     }
 
     if (!isSearchUrl(m_urlNavigator->locationUrl())) {
-        m_searchFromHome = isShellkitHomeUrl(m_urlNavigator->locationUrl());
+        const QUrl location = m_urlNavigator->locationUrl();
+        m_searchFromPage = isShellkitPageUrl(location) ? location : QUrl();
     }
     m_searchBar->setVisible(true, WithAnimation);
 
@@ -738,8 +741,8 @@ void DolphinViewContainer::delayedStatusBarUpdate()
 
 void DolphinViewContainer::updateStatusBar()
 {
-    if (m_homePageShown) {
-        return; // shellkit fork: the Home page keeps its own count
+    if (m_page) {
+        return; // shellkit fork: a page keeps its own count
     }
     m_statusBarTimestamp.start();
     m_view->requestStatusBarText();
@@ -969,14 +972,14 @@ void DolphinViewContainer::slotUrlNavigatorLocationChanged(const QUrl &url)
         m_urlNavigatorConnected->slotReturnPressed();
     }
 
-    // shellkit fork: the Home page is not listed by KIO.
-    if (isShellkitHomeUrl(url)) {
-        setHomePageShown(true);
+    // shellkit fork: the pages are not listed by KIO.
+    if (isShellkitPageUrl(url)) {
+        setPageShown(url);
         Q_EMIT m_view->urlChanged(url);
         return;
     }
-    if (m_homePageShown) {
-        setHomePageShown(false);
+    if (m_page) {
+        setPageShown(QUrl());
         if (url == m_view->url()) {
             // The view stays where it was and announces nothing, so announce it here.
             Q_EMIT m_view->urlChanged(url);
@@ -1070,36 +1073,65 @@ void DolphinViewContainer::redirect(const QUrl &oldUrl, const QUrl &newUrl)
 
 void DolphinViewContainer::requestFocus()
 {
-    if (m_homePageShown) {
-        m_homePage->setFocus();
+    if (m_page) {
+        m_page->setFocus();
         return;
     }
     m_view->setFocus();
 }
 
-void DolphinViewContainer::setHomePageShown(bool shown)
+void DolphinViewContainer::setPageShown(const QUrl &pageUrl)
 {
-    if (shown && !m_homePage) {
-        m_homePage = new HomePage(this);
-        m_topLayout->addWidget(m_homePage, positionFor.view, 0);
-        connect(m_homePage, &HomePage::folderActivated, this, &DolphinViewContainer::setUrl);
-        connect(m_homePage, &HomePage::folderInNewTab, this, &DolphinViewContainer::tabRequested);
-        connect(m_homePage, &HomePage::fileLocationRequested, this, [this](const QUrl &fileUrl) {
-            setUrl(fileUrl.adjusted(QUrl::RemoveFilename | QUrl::StripTrailingSlash));
-            m_view->markUrlsAsSelected({fileUrl});
-            m_view->markUrlAsCurrent(fileUrl);
+    // Each page is made the first time it is shown and sits where the view is.
+    const auto adopt = [this](ShellkitPage *page) {
+        m_topLayout->addWidget(page, positionFor.view, 0);
+        connect(page, &ShellkitPage::folderActivated, this, &DolphinViewContainer::setUrl);
+        connect(page, &ShellkitPage::folderInNewTab, this, &DolphinViewContainer::tabRequested);
+        connect(page, &ShellkitPage::itemCountChanged, this, [this, page]() {
+            if (m_page == page) {
+                m_statusBar->setDefaultText(i18ndcp(shellkitDomain, "@info:status", "%1 item", "%1 items", page->itemCount()));
+            }
         });
+    };
+    ShellkitPage *page = nullptr;
+    if (isShellkitHomeUrl(pageUrl)) {
+        if (!m_homePage) {
+            m_homePage = new HomePage(this);
+            adopt(m_homePage);
+            connect(m_homePage, &HomePage::fileLocationRequested, this, [this](const QUrl &fileUrl) {
+                setUrl(fileUrl.adjusted(QUrl::RemoveFilename | QUrl::StripTrailingSlash));
+                m_view->markUrlsAsSelected({fileUrl});
+                m_view->markUrlAsCurrent(fileUrl);
+            });
+        }
+        page = m_homePage;
+    } else if (pageUrl.scheme() == QLatin1String("shellkit-thispc")) {
+        if (!m_thisPcPage) {
+            m_thisPcPage = new ThisPcPage(this);
+            adopt(m_thisPcPage);
+        }
+        page = m_thisPcPage;
+    } else if (pageUrl.scheme() == QLatin1String("shellkit-network")) {
+        if (!m_networkPage) {
+            m_networkPage = new NetworkPage(this);
+            adopt(m_networkPage);
+        }
+        page = m_networkPage;
     }
-    m_homePageShown = shown;
-    m_view->setVisible(!shown);
-    if (m_homePage) {
-        m_homePage->setVisible(shown);
+    for (ShellkitPage *other : std::initializer_list<ShellkitPage *>{m_homePage, m_thisPcPage, m_networkPage}) {
+        if (other && other != page) {
+            other->setVisible(false);
+        }
     }
-    if (shown) {
+    m_page = page;
+    m_pageUrl = page ? pageUrl : QUrl();
+    m_view->setVisible(!page);
+    if (page) {
+        page->setVisible(true);
         // Commands act on the hidden view's selection otherwise.
         m_view->clearSelection();
-        m_homePage->refresh();
-        m_statusBar->setDefaultText(i18ndcp(shellkitDomain, "@info:status", "%1 item", "%1 items", m_homePage->itemCount()));
+        page->refresh();
+        m_statusBar->setDefaultText(i18ndcp(shellkitDomain, "@info:status", "%1 item", "%1 items", page->itemCount()));
     }
 }
 
