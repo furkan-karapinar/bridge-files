@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Builds Bridge Files and installs it into your home folder, no sudo:
 #   the app         ~/.local/opt/shellkit-files, with a launcher "File Explorer"
+#   the service     ~/.local/share/dbus-1/services (copy, move and delete outlive the window)
 #   the Qt style    ~/.local/<Qt plugin dir>/styles (Windows 11 and Windows 7 looks)
 #   the frame       ~/.local/<Qt plugin dir>/org.kde.kdecoration3 (tabs in the title bar)
 #
@@ -62,6 +63,17 @@ cmake -S "$root/app" -B "$build/app" -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo 
     -DCMAKE_INSTALL_PREFIX="$appprefix" -DBUILD_TESTING=OFF
 cmake --build "$build/app"
 cmake --install "$build/app" >/dev/null
+
+# The file operations service (copies go on after the window closes) is started by D-Bus, which
+# looks only in the user's data dir. It gets the plugin path too, so its windows use the style.
+services=${XDG_DATA_HOME:-$HOME/.local/share}/dbus-1/services
+mkdir -p "$services"
+cat > "$services/org.shellkit.FileOperations.service" <<EOF
+[D-BUS Service]
+Name=org.shellkit.FileOperations
+Exec=/usr/bin/env QT_PLUGIN_PATH=$userplugins $appprefix/bin/shellkit-fileops
+EOF
+busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig >/dev/null 2>&1 || true
 
 apps=${XDG_DATA_HOME:-$HOME/.local/share}/applications
 mkdir -p "$apps"

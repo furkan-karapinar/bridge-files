@@ -6,7 +6,7 @@
  */
 
 #include "treeviewcontextmenu.h"
-#include "jobs/copyprogressdialog.h"
+#include "jobs/fileoperations.h"
 
 #include "folderspanel.h"
 #include "global.h"
@@ -177,7 +177,18 @@ void TreeViewContextMenu::copy()
 
 void TreeViewContextMenu::paste()
 {
-    KIO::PasteJob *job = KIO::paste(QApplication::clipboard()->mimeData(), m_fileItem.url());
+    // shellkit fork: files run in the file operations service, other data is pasted here.
+    const QMimeData *mimeData = QApplication::clipboard()->mimeData();
+    const QList<QUrl> urls = mimeData ? KUrlMimeData::urlsFromMimeData(mimeData, KUrlMimeData::PreferLocalUrls) : QList<QUrl>();
+    if (!urls.isEmpty()) {
+        const bool move = KIO::isClipboardDataCut(mimeData);
+        FileOperations::self()->start(move ? FileOps::Type::Move : FileOps::Type::Copy, urls, m_fileItem.url(), m_parent->window());
+        if (move) {
+            QApplication::clipboard()->clear();
+        }
+        return;
+    }
+    KIO::PasteJob *job = KIO::paste(mimeData, m_fileItem.url());
     KJobWidgets::setWindow(job, m_parent);
 }
 
@@ -188,18 +199,12 @@ void TreeViewContextMenu::rename()
 
 void TreeViewContextMenu::moveToTrash()
 {
-    using Iface = KIO::AskUserActionInterface;
-    auto *deleteJob = new KIO::DeleteOrTrashJob(QList{m_fileItem.url()}, Iface::Trash, Iface::DefaultConfirmation, m_parent);
-    CopyProgressDialog::trackDeletion(deleteJob, m_parent->window());
-    deleteJob->start();
+    FileOperations::self()->start(FileOps::Type::Trash, {m_fileItem.url()}, QUrl(), m_parent->window());
 }
 
 void TreeViewContextMenu::deleteItem()
 {
-    using Iface = KIO::AskUserActionInterface;
-    auto *deleteJob = new KIO::DeleteOrTrashJob(QList{m_fileItem.url()}, Iface::Delete, Iface::DefaultConfirmation, m_parent);
-    CopyProgressDialog::trackDeletion(deleteJob, m_parent->window());
-    deleteJob->start();
+    FileOperations::self()->start(FileOps::Type::Delete, {m_fileItem.url()}, QUrl(), m_parent->window());
 }
 
 void TreeViewContextMenu::showProperties()

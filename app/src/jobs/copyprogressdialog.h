@@ -44,7 +44,10 @@ class DOLPHIN_EXPORT CopyProgressDialog : public QDialog
     Q_OBJECT
 
 public:
-    /** Shows a dialog for \a job if it is still running after a moment. */
+    /**
+     * Shows a dialog for \a job if it is still running after a moment. \a window may be null:
+     * the dialog is then a window of its own (file operations service).
+     */
     static void track(KIO::CopyJob *job, QWidget *window);
 
     /** Same for the trash or delete job that  job starts after asking the user. */

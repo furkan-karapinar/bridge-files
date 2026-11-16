@@ -28,6 +28,10 @@
 
 using CommandType = KIO::FileUndoManager::CommandType;
 class QVBoxLayout;
+namespace FileOps
+{
+enum class Type;
+}
 class DolphinItemListView;
 class KFileItemModel;
 class KItemListContainer;
@@ -930,6 +934,18 @@ private Q_SLOTS:
     void onDirectoryLoadingCompletedAfterJob();
 
 private:
+    /**
+     * shellkit fork: runs \a type in the file operations service (FileOperations), so it goes
+     * on when the window closes. With \a selectCreated the new items get selected.
+     */
+    void runFileOperation(FileOps::Type type, const QList<QUrl> &sources, const QUrl &destination, bool selectCreated);
+
+    /** The part of slotJobResult() that does not need the job. */
+    void handleJobResult(int error, const QString &errorText, bool errorShown);
+
+    /** The part of slotTrashFileFinished() and slotDeleteFileFinished() after the job. */
+    void handleDeletionResult(bool trash, int error, const QString &errorText, bool errorShown);
+
     void loadDirectory(const QUrl &url, bool reload = false);
 
     /**

@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=org.shellkit.FileOperations
+Exec=@KDE_INSTALL_FULL_BINDIR@/shellkit-fileops

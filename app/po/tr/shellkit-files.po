@@ -488,3 +488,91 @@ msgstr "Aygıt web sayfasını görüntüle"
 msgctxt "@action:inmenu"
 msgid "Copy IP address"
 msgstr "IP adresini kopyala"
+
+msgctxt "@info"
+msgid "The file operations service stopped unexpectedly."
+msgstr "Dosya işlemleri hizmeti beklenmedik biçimde durdu."
+
+msgctxt "@title"
+msgid "File operations of the File Explorer"
+msgstr "Dosya Gezgini dosya işlemleri"
+
+msgctxt "@info"
+msgid "An unknown program"
+msgstr "Bilinmeyen bir program"
+
+msgctxt "@info %2 is a program, %3 a folder"
+msgid "%2 wants to copy 1 item to %3."
+msgid_plural "%2 wants to copy %1 items to %3."
+msgstr[0] "%2, 1 öğeyi şuraya kopyalamak istiyor: %3"
+msgstr[1] "%2, %1 öğeyi şuraya kopyalamak istiyor: %3"
+
+msgctxt "@info %1 is a program, %2 the new name"
+msgid "%1 wants to make a copy named %2."
+msgstr "%1, %2 adında bir kopya oluşturmak istiyor."
+
+msgctxt "@info %2 is a program, %3 a folder"
+msgid "%2 wants to move 1 item to %3."
+msgid_plural "%2 wants to move %1 items to %3."
+msgstr[0] "%2, 1 öğeyi şuraya taşımak istiyor: %3"
+msgstr[1] "%2, %1 öğeyi şuraya taşımak istiyor: %3"
+
+msgctxt "@info %2 is a program, %3 a folder"
+msgid "%2 wants to create a link to 1 item in %3."
+msgid_plural "%2 wants to create links to %1 items in %3."
+msgstr[0] "%2, 1 öğenin kısayolunu şurada oluşturmak istiyor: %3"
+msgstr[1] "%2, %1 öğenin kısayolunu şurada oluşturmak istiyor: %3"
+
+msgctxt "@info %2 is a program"
+msgid "%2 wants to move 1 item to the Recycle Bin."
+msgid_plural "%2 wants to move %1 items to the Recycle Bin."
+msgstr[0] "%2, 1 öğeyi Geri Dönüşüm Kutusu'na taşımak istiyor."
+msgstr[1] "%2, %1 öğeyi Geri Dönüşüm Kutusu'na taşımak istiyor."
+
+msgctxt "@info %2 is a program"
+msgid "%2 wants to permanently delete 1 item."
+msgid_plural "%2 wants to permanently delete %1 items."
+msgstr[0] "%2, 1 öğeyi kalıcı olarak silmek istiyor."
+msgstr[1] "%2, %1 öğeyi kalıcı olarak silmek istiyor."
+
+msgctxt "@info %1 is a program"
+msgid "%1 wants to empty the Recycle Bin."
+msgstr "%1, Geri Dönüşüm Kutusu'nu boşaltmak istiyor."
+
+msgctxt "@title:window"
+msgid "Allow file operation?"
+msgstr "Dosya işlemine izin verilsin mi?"
+
+msgctxt "@info"
+msgid "and 1 more item"
+msgid_plural "and %1 more items"
+msgstr[0] "ve 1 öğe daha"
+msgstr[1] "ve %1 öğe daha"
+
+msgctxt "@info %1 is a path"
+msgid "Program: %1"
+msgstr "Program: %1"
+
+msgctxt "@info %1 is a command line"
+msgid "Command: %1"
+msgstr "Komut: %1"
+
+msgctxt "@info"
+msgid "Process ID: %1"
+msgstr "İşlem kimliği: %1"
+
+msgctxt "@info"
+msgid "Only allow this if you asked that program to do it."
+msgstr "Yalnızca bu işi o programdan siz istediyseniz izin verin."
+
+msgctxt "@action:button"
+msgid "Allow"
+msgstr "İzin ver"
+
+msgctxt "@action:button"
+msgid "Deny"
+msgstr "Reddet"
+
+msgctxt "@info"
+msgid "The user did not allow this file operation."
+msgstr "Kullanıcı bu dosya işlemine izin vermedi."

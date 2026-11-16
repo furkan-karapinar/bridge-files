@@ -11,6 +11,7 @@
 #include "dolphin_generalsettings.h"
 #include "shellkit.h"
 #include "jobs/copyprogressdialog.h"
+#include "jobs/fileoperations.h"
 #include "dolphinitemlistview.h"
 #include "dolphinnewfilemenuobserver.h"
 #include "draganddrophelper.h"
@@ -883,31 +884,31 @@ void DolphinView::renameSelectedItems()
 void DolphinView::trashSelectedItems()
 {
     const QList<QUrl> list = simplifiedSelectedUrls();
-
-    using Iface = KIO::AskUserActionInterface;
-    auto *trashJob = new KIO::DeleteOrTrashJob(list, Iface::Trash, Iface::DefaultConfirmation, this);
-    // Auto*Warning*Handling, errors are put in a KMessageWidget by us in slotTrashFileFinished.
-    trashJob->setUiDelegate(KIO::createDefaultJobUiDelegate(KJobUiDelegate::AutoWarningHandlingEnabled, this));
-    connect(trashJob, &KJob::result, this, &DolphinView::slotTrashFileFinished);
+    if (list.isEmpty()) {
+        return;
+    }
     m_selectNextItem = true;
-    // shellkit fork: progress in the Windows 11 dialog, not in a notification.
-    CopyProgressDialog::trackDeletion(trashJob, window());
-    trashJob->start();
+    // shellkit fork: runs in the file operations service, which also asks for confirmation and
+    // shows the progress in the Windows 11 dialog.
+    FileOperation *operation = FileOperations::self()->start(FileOps::Type::Trash, list, QUrl(), window());
+    connect(operation, &FileOperation::finished, this, [this](int error, const QString &errorText, const QList<QUrl> &, bool errorShown) {
+        handleDeletionResult(true, error, errorText, errorShown);
+    });
 }
 
 void DolphinView::deleteSelectedItems()
 {
     const QList<QUrl> list = simplifiedSelectedUrls();
-
-    using Iface = KIO::AskUserActionInterface;
-    auto *trashJob = new KIO::DeleteOrTrashJob(list, Iface::Delete, Iface::DefaultConfirmation, this);
-    // Auto*Warning*Handling, errors are put in a KMessageWidget by us in slotDeleteFileFinished.
-    trashJob->setUiDelegate(KIO::createDefaultJobUiDelegate(KJobUiDelegate::AutoWarningHandlingEnabled, this));
-    connect(trashJob, &KJob::result, this, &DolphinView::slotDeleteFileFinished);
+    if (list.isEmpty()) {
+        return;
+    }
     m_selectNextItem = true;
-    // shellkit fork: progress in the Windows 11 dialog, not in a notification.
-    CopyProgressDialog::trackDeletion(trashJob, window());
-    trashJob->start();
+    // shellkit fork: runs in the file operations service, which also asks for confirmation and
+    // shows the progress in the Windows 11 dialog.
+    FileOperation *operation = FileOperations::self()->start(FileOps::Type::Delete, list, QUrl(), window());
+    connect(operation, &FileOperation::finished, this, [this](int error, const QString &errorText, const QList<QUrl> &, bool errorShown) {
+        handleDeletionResult(false, error, errorText, errorShown);
+    });
 }
 
 void DolphinView::cutSelectedItemsToClipboard()
@@ -930,21 +931,7 @@ void DolphinView::copySelectedItems(const KFileItemList &selection, const QUrl &
     if (selection.isEmpty() || !destinationUrl.isValid()) {
         return;
     }
-
-    m_clearSelectionBeforeSelectingNewItems = true;
-    m_markFirstNewlySelectedItemAsCurrent = true;
-    m_selectJobCreatedItems = true;
-
-    KIO::CopyJob *job = KIO::copy(selection.urlList(), destinationUrl, KIO::DefaultFlags);
-    KJobWidgets::setWindow(job, this);
-
-    connect(job, &KIO::CopyJob::result, this, &DolphinView::slotJobResult);
-    connect(job, &KIO::CopyJob::copying, this, &DolphinView::slotItemCreatedFromJob);
-    connect(job, &KIO::CopyJob::copyingDone, this, &DolphinView::slotItemCreatedFromJob);
-    connect(job, &KIO::CopyJob::warning, this, [this](KJob *job, const QString & /* warning */) {
-        Q_EMIT errorMessage(job->errorString(), job->error());
-    });
-    KIO::FileUndoManager::self()->recordCopyJob(job);
+    runFileOperation(FileOps::Type::Copy, selection.urlList(), destinationUrl, true);
 }
 
 void DolphinView::moveSelectedItems(const KFileItemList &selection, const QUrl &destinationUrl)
@@ -952,21 +939,7 @@ void DolphinView::moveSelectedItems(const KFileItemList &selection, const QUrl &
     if (selection.isEmpty() || !destinationUrl.isValid()) {
         return;
     }
-
-    m_clearSelectionBeforeSelectingNewItems = true;
-    m_markFirstNewlySelectedItemAsCurrent = true;
-    m_selectJobCreatedItems = true;
-
-    KIO::CopyJob *job = KIO::move(selection.urlList(), destinationUrl, KIO::DefaultFlags);
-    KJobWidgets::setWindow(job, this);
-
-    connect(job, &KIO::CopyJob::result, this, &DolphinView::slotJobResult);
-    connect(job, &KIO::CopyJob::moving, this, &DolphinView::slotItemCreatedFromJob);
-    connect(job, &KIO::CopyJob::copyingDone, this, &DolphinView::slotItemCreatedFromJob);
-    connect(job, &KIO::CopyJob::warning, this, [this](KJob *job, const QString & /*warning */) {
-        Q_EMIT errorMessage(job->errorString(), job->error());
-    });
-    KIO::FileUndoManager::self()->recordCopyJob(job);
+    runFileOperation(FileOps::Type::Move, selection.urlList(), destinationUrl, true);
 }
 
 void DolphinView::paste()
@@ -1020,17 +993,7 @@ void DolphinView::duplicateSelectedItems()
             duplicateURL.setPath(originalDirectoryPath + i18nc("<filename> copy", "%1 copy", originalFilenameWithoutExtension) + originalExtension);
         }
 
-        KIO::CopyJob *job = KIO::copyAs(originalURL, duplicateURL);
-        job->setAutoRename(true);
-        KJobWidgets::setWindow(job, this);
-
-        connect(job, &KIO::CopyJob::result, this, &DolphinView::slotJobResult);
-        connect(job, &KIO::CopyJob::copyingDone, this, &DolphinView::slotItemCreatedFromJob);
-        connect(job, &KIO::CopyJob::copyingLinkDone, this, &DolphinView::slotItemLinkCreatedFromJob);
-        connect(job, &KIO::CopyJob::warning, this, [this](KJob *job, const QString & /*warning*/) {
-            Q_EMIT errorMessage(job->errorString(), job->error());
-        });
-        KIO::FileUndoManager::self()->recordCopyJob(job);
+        runFileOperation(FileOps::Type::CopyAs, {originalURL}, duplicateURL, true);
     }
 }
 
@@ -1500,7 +1463,25 @@ void DolphinView::dropUrls(const QUrl &destUrl, QDropEvent *dropEvent, QWidget *
         dropjobFlags |= KIO::DropJobFlag::ExcludePluginsActions;
     }
 
-    KIO::DropJob *job = DragAndDropHelper::dropUrls(destUrl, dropEvent, dropWidget, dropjobFlags);
+    FileOperation *operation = nullptr;
+    KIO::DropJob *job = DragAndDropHelper::dropUrls(destUrl, dropEvent, dropWidget, dropjobFlags, &operation);
+
+    if (operation) {
+        const bool selectCreated = destUrl == url();
+        if (selectCreated) {
+            m_clearSelectionBeforeSelectingNewItems = true;
+            m_markFirstNewlySelectedItemAsCurrent = true;
+            m_selectJobCreatedItems = true;
+        }
+        connect(operation, &FileOperation::finished, this, [this, selectCreated](int error, const QString &errorText, const QList<QUrl> &created, bool errorShown) {
+            if (selectCreated) {
+                for (const QUrl &url : created) {
+                    slotItemCreated(url);
+                }
+            }
+            handleJobResult(error, errorText, errorShown);
+        });
+    }
 
     if (job) {
         connect(job, &KIO::DropJob::result, this, &DolphinView::slotJobResult);
@@ -1602,8 +1583,29 @@ void DolphinView::onDirectoryLoadingCompletedAfterJob()
 
 void DolphinView::slotJobResult(KJob *job)
 {
-    if (job->error() && job->error() != KIO::ERR_USER_CANCELED) {
-        Q_EMIT errorMessage(job->errorString(), job->error());
+    handleJobResult(job->error(), job->errorString(), false);
+}
+
+void DolphinView::runFileOperation(FileOps::Type type, const QList<QUrl> &sources, const QUrl &destination, bool selectCreated)
+{
+    if (selectCreated) {
+        m_clearSelectionBeforeSelectingNewItems = true;
+        m_markFirstNewlySelectedItemAsCurrent = true;
+        m_selectJobCreatedItems = true;
+    }
+    FileOperation *operation = FileOperations::self()->start(type, sources, destination, window());
+    connect(operation, &FileOperation::finished, this, [this](int error, const QString &errorText, const QList<QUrl> &created, bool errorShown) {
+        for (const QUrl &url : created) {
+            slotItemCreated(url);
+        }
+        handleJobResult(error, errorText, errorShown);
+    });
+}
+
+void DolphinView::handleJobResult(int error, const QString &errorText, bool errorShown)
+{
+    if (error && error != KIO::ERR_USER_CANCELED && !errorShown) {
+        Q_EMIT errorMessage(errorText, error);
     }
     if (!m_selectJobCreatedItems) {
         m_selectedUrls.clear();
@@ -2095,21 +2097,21 @@ void DolphinView::slotTwoClicksRenamingTimerTimeout()
 
 void DolphinView::slotTrashFileFinished(KJob *job)
 {
-    if (job->error() == 0) {
-        selectNextItem(); // Fixes BUG: 419914 via selecting next item
-        Q_EMIT operationCompletedMessage(i18nc("@info:status", "Trash operation completed."));
-    } else if (job->error() != KIO::ERR_USER_CANCELED) {
-        Q_EMIT errorMessage(job->errorString(), job->error());
-    }
+    handleDeletionResult(true, job->error(), job->errorString(), false);
 }
 
 void DolphinView::slotDeleteFileFinished(KJob *job)
 {
-    if (job->error() == 0) {
+    handleDeletionResult(false, job->error(), job->errorString(), false);
+}
+
+void DolphinView::handleDeletionResult(bool trash, int error, const QString &errorText, bool errorShown)
+{
+    if (error == 0) {
         selectNextItem(); // Fixes BUG: 419914 via selecting next item
-        Q_EMIT operationCompletedMessage(i18nc("@info:status", "Delete operation completed."));
-    } else if (job->error() != KIO::ERR_USER_CANCELED) {
-        Q_EMIT errorMessage(job->errorString(), job->error());
+        Q_EMIT operationCompletedMessage(trash ? i18nc("@info:status", "Trash operation completed.") : i18nc("@info:status", "Delete operation completed."));
+    } else if (error != KIO::ERR_USER_CANCELED && !errorShown) {
+        Q_EMIT errorMessage(errorText, error);
     }
 }
 
@@ -2615,6 +2617,20 @@ void DolphinView::applyDynamicView()
 
 void DolphinView::pasteToUrl(const QUrl &url)
 {
+    // shellkit fork: files on the clipboard are copied or moved by the file operations service;
+    // other clipboard data (text, pictures) still becomes a new file here.
+    const QMimeData *mimeData = QApplication::clipboard()->mimeData();
+    const QList<QUrl> urls = mimeData ? KUrlMimeData::urlsFromMimeData(mimeData, KUrlMimeData::PreferLocalUrls) : QList<QUrl>();
+    if (!urls.isEmpty()) {
+        const bool move = KIO::isClipboardDataCut(mimeData);
+        runFileOperation(move ? FileOps::Type::Move : FileOps::Type::Copy, urls, url, true);
+        if (move) {
+            // As in Windows: what was cut can be pasted only once.
+            QApplication::clipboard()->clear();
+        }
+        return;
+    }
+
     // shellkit fork: progress in the Windows 11 copy dialog, not in a notification.
     KIO::PasteJob *job = KIO::paste(QApplication::clipboard()->mimeData(), url, KIO::HideProgressInfo);
     KJobWidgets::setWindow(job, this);

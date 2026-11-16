@@ -57,6 +57,9 @@ Turkish translation.
   (Ctrl+Shift+C).
 - A copy, move and delete window that shows "N% complete" with a speed graph, pause and cancel.
   A classic layout can be chosen instead.
+- Copying, moving and deleting run in a small service of their own, so they go on when you close
+  the window, as on Windows. Only File Explorer uses it without asking; any other program that
+  asks it for a file operation gets an "Allow / Deny" window for every request.
 - A plain drop onto another drive copies the files straight away, with no menu asking what to do.
 
 **Windows 7 look (optional)**
@@ -135,8 +138,8 @@ The app itself follows your system colours, icons and fonts.
 - Some KDE dialogs (Properties, the settings window) keep their KDE layout.
 - The Network page sees only devices that announce themselves over mDNS/DNS-SD or that talked
   to your computer lately. Windows PCs show up only if they announce themselves that way.
-- "Copy to" and some deletions outside the file view still report progress as a Plasma
-  notification instead of the copy window.
+- Emptying the trash shows no progress window. Undo for operations in the service lasts only
+  while File Explorer is open (the service quits about a minute after the last window closes).
 - In the Windows 7 look, the preview pane keeps the Dolphin layout and Libraries are your user
   folders, not real libraries.
 - Internally the app is still called `shellkit-files` (binary, settings file `shellkit-filesrc`,

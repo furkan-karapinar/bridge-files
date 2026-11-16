@@ -7,6 +7,7 @@
  */
 
 #include "dolphinmainwindow.h"
+#include "jobs/fileoperations.h"
 
 #include "admin/workerintegration.h"
 #include "dolphin_generalsettings.h"
@@ -276,10 +277,15 @@ DolphinMainWindow::DolphinMainWindow()
     KIO::FileUndoManager *undoManager = KIO::FileUndoManager::self();
     undoManager->setUiInterface(new UndoUiInterface());
 
-    connect(undoManager, &KIO::FileUndoManager::undoAvailable, this, &DolphinMainWindow::slotUndoAvailable);
-    connect(undoManager, &KIO::FileUndoManager::undoTextChanged, this, &DolphinMainWindow::slotUndoTextChanged);
-    connect(undoManager, &KIO::FileUndoManager::redoAvailable, this, &DolphinMainWindow::slotRedoAvailable);
-    connect(undoManager, &KIO::FileUndoManager::redoTextChanged, this, &DolphinMainWindow::slotRedoTextChanged);
+    // shellkit fork: one undo history over the operations of the file operations service and
+    // the ones that still run here.
+    connect(FileOperations::self(), &FileOperations::undoStateChanged, this, [this]() {
+        FileOperations *operations = FileOperations::self();
+        slotUndoAvailable(operations->isUndoAvailable());
+        slotUndoTextChanged(operations->undoText());
+        slotRedoAvailable(operations->isRedoAvailable());
+        slotRedoTextChanged(operations->redoText());
+    });
 
     const bool firstRun = (GeneralSettings::version() < 200);
     if (firstRun) {
@@ -1024,8 +1030,7 @@ void DolphinMainWindow::slotUndoTextChanged(const QString &text)
 
 void DolphinMainWindow::undo()
 {
-    KIO::FileUndoManager::self()->uiInterface()->setParentWidget(this);
-    KIO::FileUndoManager::self()->undo();
+    FileOperations::self()->undo(this);
 }
 
 void DolphinMainWindow::slotRedoAvailable(bool available)
@@ -1046,8 +1051,7 @@ void DolphinMainWindow::slotRedoTextChanged(const QString &text)
 
 void DolphinMainWindow::redo()
 {
-    KIO::FileUndoManager::self()->uiInterface()->setParentWidget(this);
-    KIO::FileUndoManager::self()->redo();
+    FileOperations::self()->redo(this);
 }
 
 void DolphinMainWindow::cut()

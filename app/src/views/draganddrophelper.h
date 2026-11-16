@@ -17,6 +17,7 @@
 #include <QString>
 #include <QUrl>
 
+class FileOperation;
 class QDropEvent;
 class QMimeData;
 class QWidget;
@@ -43,7 +44,11 @@ public:
      *                      in the mimeData url list.
      */
     static KIO::DropJob *
-    dropUrls(const QUrl &destUrl, QDropEvent *event, QWidget *window, KIO::DropJobFlags dropjobFlags = KIO::DropJobFlag::DropJobDefaultFlags);
+    dropUrls(const QUrl &destUrl,
+             QDropEvent *event,
+             QWidget *window,
+             KIO::DropJobFlags dropjobFlags = KIO::DropJobFlag::DropJobDefaultFlags,
+             FileOperation **operation = nullptr);
 
     /**
      * Checks if the destination supports dropping.

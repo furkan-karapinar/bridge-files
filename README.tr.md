@@ -56,6 +56,9 @@ Sistemdeki Dolphin'in yanına kurulur ve ona dokunmaz. Ayar dosyası, uygulama k
   kopyala" da vardır (Ctrl+Shift+C).
 - Kopyalama, taşıma ve silme penceresi "%N tamamlandı" yazar, hız grafiği gösterir, duraklatma
   ve iptal düğmeleri vardır. İstersen klasik düzeni seçebilirsin.
+- Kopyalama, taşıma ve silme ayrı küçük bir serviste çalışır; Windows'taki gibi pencereyi
+  kapatınca durmaz. Servisi yalnız Dosya Gezgini sormadan kullanır; ondan dosya işlemi isteyen
+  başka her program için her istekte "İzin ver / Reddet" penceresi açılır.
 - Başka bir sürücüye bırakılan dosyalar menü sormadan kopyalanır.
 
 **Windows 7 görünümü (isteğe bağlı)**
@@ -139,8 +142,9 @@ Uygulamanın kendisi sistemindeki renkleri, simgeleri ve yazı tiplerini kullan�
 - Bazı KDE pencereleri (Özellikler, ayarlar penceresi) KDE düzeninde kalır.
 - Ağ sayfası yalnız kendini mDNS/DNS-SD ile duyuran ya da bilgisayarınla yakın zamanda konuşan
   aygıtları görür. Windows bilgisayarlar ancak kendilerini bu yolla duyururlarsa görünür.
-- "Şuraya kopyala" ve dosya görünümü dışındaki bazı silmelerin ilerlemesi kopyalama penceresi
-  yerine Plasma bildiriminde görünür.
+- Çöp Kutusunu boşaltırken ilerleme penceresi çıkmaz. Servisteki işlemlerin geri alınması yalnız
+  Dosya Gezgini açıkken mümkündür (son pencere kapandıktan yaklaşık bir dakika sonra servis
+  kapanır).
 - Windows 7 görünümünde önizleme bölmesi Dolphin düzenindedir. Kitaplıklar gerçek kitaplık
   değildir, kullanıcı klasörlerine bağlanır.
 - Uygulamanın iç adı hâlâ `shellkit-files`: program, ayar dosyası (`shellkit-filesrc`) ve

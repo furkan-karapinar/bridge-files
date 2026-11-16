@@ -24,9 +24,11 @@ if [ -f "$state/kwin-decoration.bak" ]; then
     echo "KWin gets its previous window decoration back after you sign out and in."
 fi
 
+pkill -f "opt/shellkit-files/bin/shellkit-fileop[s]" 2>/dev/null || true
 rm -rf "$prefix/opt/shellkit-files" "$state" "${XDG_CACHE_HOME:-$HOME/.cache}/bridge-files"
 rm -f "$userplugins/styles/shellkit-win11.so" \
     "$userplugins/org.kde.kdecoration3/org.shellkit.win11.so" \
     "${XDG_DATA_HOME:-$HOME/.local/share}/applications/org.shellkit.files.desktop" \
+    "${XDG_DATA_HOME:-$HOME/.local/share}/dbus-1/services/org.shellkit.FileOperations.service" \
     "${XDG_CONFIG_HOME:-$HOME/.config}/plasma-workspace/env/bridge-files-plugins.sh"
 echo "Bridge Files removed."

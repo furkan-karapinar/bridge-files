@@ -222,3 +222,38 @@ release and apply that diff here; the fork's own changes are listed below.
   `sftp:/`, a device its web page in the browser, an adapter Plasma's network settings. Needs
   `Qt6::Network` (top `CMakeLists.txt`, `dolphinstatic`).
 - `dolphintabwidget.cpp`: tab icons of the pages.
+
+### File operations service (operations outlive the window)
+
+Copy, move, link, duplicate, trash, delete and empty trash run in a separate process,
+`shellkit-fileops`, as in Windows, where closing the window does not stop a copy.
+
+- `jobs/fileoperations.*` (dolphinprivate): `FileOps` (names, `Type`), `FileOperationRunner`
+  (the KIO job, the copy dialog, the undo record and the created items; used by the service and
+  by the in-process fallback) and `FileOperations::self()`, the client: `start()` returns a
+  `FileOperation` that emits `finished(error, text, created, errorShown)` once; `undo()`/`redo()`
+  and `undoStateChanged` merge the service's undo stack with the local `FileUndoManager` by
+  time (`fileOpsStamp()`).
+- `fileops/` the service: D-Bus `org.shellkit.FileOperations` at `/FileOperations`,
+  `Run(id, op, sources, dest, activationToken)`, `Undo`, `Redo`; replies are signals sent only to
+  the caller (`Finished`, `UndoStateChanged`). It is D-Bus activated
+  (`org.shellkit.FileOperations.service`, copied to `~/.local/share/dbus-1/services` by
+  `tools/build-files.sh`) and quits after about a minute without jobs, open windows, pending
+  questions or File Explorer clients. `QCoreApplication::setQuitLockEnabled(false)`: KIO jobs hold
+  a `QEventLoopLocker`, which would otherwise quit the service when the last job ends.
+- Security: the caller is checked by D-Bus sender → PID → `/proc/PID/exe`; only the
+  `shellkit-files` next to the service, same user, runs without a question. Any other program
+  gets "Allow file operation?" for every request (plain text, program path, command line,
+  process ID; Deny is the default, Allow is enabled after 1 s; at most 3 open questions per
+  caller) and may not undo or redo. Input is checked (known operation, valid absolute URLs, at
+  most 100000 sources). This is a guard against other programs using the service by accident or
+  without the user knowing, not a boundary against code of the same user.
+- Callers: `DolphinView` (paste, copy/move to, duplicate, trash, delete, drop), the folders panel,
+  `Trash::empty`, `DolphinMainWindow::undo/redo`. Drops follow Windows: Ctrl copies, Shift moves,
+  Ctrl+Shift or Alt links, otherwise move on the same device and copy to another
+  (`DragAndDropHelper::serviceDropType`, only for local files with the default drop setting;
+  everything else still goes to `KIO::drop`).
+- Fallback: when the service cannot be started the operation runs in the File Explorer as before;
+  `SHELLKIT_FILEOPS_LOCAL=1` forces this.
+- Tests on the VM: `tools/test-fileops.sh`, `tools/test-fileops-close.sh [term|window]`,
+  `tools/test-fileops-undo.sh [local]`.

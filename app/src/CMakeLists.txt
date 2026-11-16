@@ -117,6 +117,7 @@ target_sources(dolphinprivate PRIVATE
     views/dolphinviewactionhandler.cpp
     views/draganddrophelper.cpp
     jobs/copyprogressdialog.cpp
+    jobs/fileoperations.cpp
     views/versioncontrol/updateitemstatesthread.cpp
     views/versioncontrol/versioncontrolobserver.cpp
     views/viewmodecontroller.cpp
@@ -172,6 +173,7 @@ target_sources(dolphinprivate PRIVATE
     views/dolphinviewactionhandler.h
     views/draganddrophelper.h
     jobs/copyprogressdialog.h
+    jobs/fileoperations.h
     views/versioncontrol/updateitemstatesthread.h
     views/versioncontrol/versioncontrolobserver.h
     views/viewmodecontroller.h
@@ -573,6 +575,18 @@ generate_and_install_dbus_interface(
 
 set_target_properties(dolphin PROPERTIES OUTPUT_NAME shellkit-files)
 install(TARGETS dolphin ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+
+# shellkit fork: the file operations service, so copies and deletions outlive the window.
+add_executable(shellkit-fileops)
+target_sources(shellkit-fileops PRIVATE
+    fileops/main.cpp
+    fileops/fileopsservice.cpp
+    fileops/fileopsservice.h
+)
+target_link_libraries(shellkit-fileops PRIVATE dolphinprivate KF6::Crash)
+install(TARGETS shellkit-fileops ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+configure_file(fileops/org.shellkit.FileOperations.service.in ${CMAKE_CURRENT_BINARY_DIR}/org.shellkit.FileOperations.service)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.shellkit.FileOperations.service DESTINATION ${KDE_INSTALL_DBUSSERVICEDIR})
 
 ##########################################
 

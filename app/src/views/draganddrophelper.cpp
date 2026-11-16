@@ -7,11 +7,13 @@
 
 #include "draganddrophelper.h"
 #include "jobs/copyprogressdialog.h"
+#include "jobs/fileoperations.h"
 
 #include <KIO/DropJob>
 #include <KConfigGroup>
 #include <KJobWidgets>
 #include <KSharedConfig>
+#include <KUrlMimeData>
 
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -63,7 +65,80 @@ bool isDropOntoOtherDevice(const QDropEvent *event, const QUrl &destUrl)
 }
 }
 
-KIO::DropJob *DragAndDropHelper::dropUrls(const QUrl &destUrl, QDropEvent *event, QWidget *window, KIO::DropJobFlags dropjobFlags)
+/**
+ * shellkit fork: files dropped onto a folder on this computer are copied, moved or linked by
+ * the file operations service, with Windows' rules: Ctrl copies, Shift moves, Ctrl+Shift or Alt
+ * links, and a plain drop moves on the same device and copies onto another one. Anything else
+ * (another drop behaviour chosen in System Settings, remote places, drops onto programs, a
+ * move within the same folder) is left to KIO.
+ */
+static std::optional<FileOps::Type> serviceDropType(const QDropEvent *event, const QUrl &destUrl, const QList<QUrl> &urls)
+{
+    const KConfigGroup kdeGroup(KSharedConfig::openConfig(), QStringLiteral("KDE"));
+    if (kdeGroup.readEntry("DndBehavior") != QLatin1String("MoveIfSameDevice")) {
+        return std::nullopt;
+    }
+    if (urls.isEmpty() || !destUrl.isLocalFile()) {
+        return std::nullopt;
+    }
+    const QFileInfo dest(destUrl.toLocalFile());
+    if (!dest.isDir()) {
+        return std::nullopt;
+    }
+    const QUrl destDir = destUrl.adjusted(QUrl::StripTrailingSlash);
+    bool allInDest = true;
+    for (const QUrl &url : urls) {
+        if (!url.isLocalFile()) {
+            return std::nullopt;
+        }
+        if (!url.adjusted(QUrl::RemoveFilename | QUrl::StripTrailingSlash).matches(destDir, QUrl::StripTrailingSlash)) {
+            allInDest = false;
+        }
+    }
+
+    const Qt::KeyboardModifiers modifiers = event->modifiers();
+    const bool control = modifiers & Qt::ControlModifier;
+    const bool shift = modifiers & Qt::ShiftModifier;
+    FileOps::Type type;
+    Qt::DropAction action;
+    if ((control && shift) || (modifiers & Qt::AltModifier)) {
+        type = FileOps::Type::Link;
+        action = Qt::LinkAction;
+    } else if (control) {
+        type = FileOps::Type::Copy;
+        action = Qt::CopyAction;
+    } else if (shift) {
+        type = FileOps::Type::Move;
+        action = Qt::MoveAction;
+    } else {
+        const QByteArray destDevice = QStorageInfo(dest.absoluteFilePath()).device();
+        int sameDevice = 0;
+        for (const QUrl &url : urls) {
+            if (QStorageInfo(url.toLocalFile()).device() == destDevice) {
+                ++sameDevice;
+            }
+        }
+        if (sameDevice == urls.size()) {
+            type = FileOps::Type::Move;
+            action = Qt::MoveAction;
+        } else if (sameDevice == 0) {
+            type = FileOps::Type::Copy;
+            action = Qt::CopyAction;
+        } else {
+            return std::nullopt;
+        }
+    }
+    if (type == FileOps::Type::Move && allInDest) {
+        return std::nullopt;
+    }
+    if (!(event->possibleActions() & action)) {
+        return std::nullopt;
+    }
+    return type;
+}
+
+KIO::DropJob *
+DragAndDropHelper::dropUrls(const QUrl &destUrl, QDropEvent *event, QWidget *window, KIO::DropJobFlags dropjobFlags, FileOperation **operation)
 {
     const QMimeData *mimeData = event->mimeData();
     if (isArkDndMimeType(mimeData)) {
@@ -78,6 +153,15 @@ KIO::DropJob *DragAndDropHelper::dropUrls(const QUrl &destUrl, QDropEvent *event
         QDBusConnection::sessionBus().call(message);
     } else {
         if (urlListMatchesUrl(event->mimeData()->urls(), destUrl)) {
+            return nullptr;
+        }
+
+        const QList<QUrl> urls = KUrlMimeData::urlsFromMimeData(mimeData, KUrlMimeData::PreferLocalUrls);
+        if (const std::optional<FileOps::Type> type = serviceDropType(event, destUrl, urls)) {
+            FileOperation *started = FileOperations::self()->start(*type, urls, destUrl, window ? window->window() : nullptr);
+            if (operation) {
+                *operation = started;
+            }
             return nullptr;
         }
 

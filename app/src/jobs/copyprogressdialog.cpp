@@ -15,6 +15,9 @@
 #include <KIO/DeleteOrTrashJob>
 #include <KIO/JobTracker>
 #include <KJobTrackerInterface>
+#include <KConfigGroup>
+#include <KSharedConfig>
+#include <KWindowSystem>
 
 #include <QDesktopServices>
 #include <QLocale>
@@ -261,10 +264,15 @@ void CopyProgressDialog::trackJob(KIO::Job *job, QWidget *window)
     }
     QPointer<KIO::Job> guard(job);
     QPointer<QWidget> parent(window);
-    QTimer::singleShot(ShowDelay, job, [guard, parent]() {
-        if (guard && parent) {
+    // Without a window (in the file operations service) the dialog is a window of its own.
+    const bool ownWindow = !window;
+    QTimer::singleShot(ShowDelay, job, [guard, parent, ownWindow]() {
+        if (guard && (parent || ownWindow)) {
             auto dialog = new CopyProgressDialog(guard, parent);
             dialog->show();
+            if (ownWindow && dialog->windowHandle()) {
+                KWindowSystem::activateWindow(dialog->windowHandle());
+            }
         }
     });
 }
@@ -307,7 +315,7 @@ CopyProgressDialog::CopyProgressDialog(KIO::Job *job, QWidget *parent)
     connect(m_detailsButton, &QToolButton::clicked, this, [this]() {
         const bool shown = !m_details->isVisible();
         setDetailsShown(shown);
-        KConfigGroup group(KSharedConfig::openConfig(), QStringLiteral("CopyDialog"));
+        KConfigGroup group(KSharedConfig::openConfig(QStringLiteral("shellkit-filesrc")), QStringLiteral("CopyDialog"));
         group.writeEntry("Details", shown);
     });
 
@@ -368,7 +376,7 @@ CopyProgressDialog::CopyProgressDialog(KIO::Job *job, QWidget *parent)
     updateProgress();
     updateDetails();
     // Windows remembers whether the details were open last time.
-    setDetailsShown(KConfigGroup(KSharedConfig::openConfig(), QStringLiteral("CopyDialog")).readEntry("Details", true));
+    setDetailsShown(KConfigGroup(KSharedConfig::openConfig(QStringLiteral("shellkit-filesrc")), QStringLiteral("CopyDialog")).readEntry("Details", true));
 }
 
 void CopyProgressDialog::setupModern()

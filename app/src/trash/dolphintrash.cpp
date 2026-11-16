@@ -6,6 +6,7 @@
  */
 
 #include "dolphintrash.h"
+#include "jobs/fileoperations.h"
 
 #include <KConfig>
 #include <KConfigGroup>
@@ -87,14 +88,13 @@ static void notifyEmptied()
 
 void Trash::empty(QWidget *window)
 {
-    using Iface = KIO::AskUserActionInterface;
-    auto *emptyJob = new KIO::DeleteOrTrashJob(QList<QUrl>{}, Iface::EmptyTrash, Iface::DefaultConfirmation, window);
-    QObject::connect(emptyJob, &KIO::Job::result, emptyJob, [emptyJob] {
-        if (!emptyJob->error()) {
+    // shellkit fork: in the file operations service, so it goes on when the window closes.
+    FileOperation *operation = FileOperations::self()->start(FileOps::Type::EmptyTrash, {}, QUrl(), window);
+    QObject::connect(operation, &FileOperation::finished, operation, [](int error) {
+        if (!error) {
             notifyEmptied();
         }
     });
-    emptyJob->start();
 }
 
 bool Trash::isEmpty()
