@@ -7,6 +7,7 @@
  */
 
 #include "dolphinmainwindow.h"
+#include "jobs/compressedfolders.h"
 #include "jobs/fileoperations.h"
 
 #include "admin/workerintegration.h"
@@ -83,6 +84,7 @@
 
 #include <kwidgetsaddons_version.h>
 
+#include <QActionGroup>
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
@@ -108,6 +110,8 @@
 #include <QWidgetAction>
 #include <QtConcurrentRun>
 #include <dolphindebug.h>
+
+#include <functional>
 
 #include <algorithm>
 
@@ -645,6 +649,29 @@ void DolphinMainWindow::openNewTabAndActivate(const QUrl &url)
 void DolphinMainWindow::openNewWindow(const QUrl &url)
 {
     Dolphin::openNewWindow({url}, this);
+}
+
+void DolphinMainWindow::compressToZip(const KFileItemList &items)
+{
+    QPointer<DolphinMainWindow> window(this);
+    CompressedFolders::compress(items, this, [window](const QUrl &archive) {
+        if (!window || !window->activeViewContainer()) {
+            return;
+        }
+        // As in Windows the new file is renamed in place, if its folder is still shown.
+        DolphinView *view = window->activeViewContainer()->view();
+        const QUrl folder = archive.adjusted(QUrl::RemoveFilename | QUrl::StripTrailingSlash);
+        if (view->url().adjusted(QUrl::StripTrailingSlash) == folder) {
+            view->selectAndRename(archive);
+        }
+    });
+}
+
+void DolphinMainWindow::extractAll(const KFileItem &archive)
+{
+    CompressedFolders::extractAll(archive, this, [](const QUrl &folder) {
+        Dolphin::openNewWindow({folder});
+    });
 }
 
 void DolphinMainWindow::slotSplitViewChanged()
@@ -1356,7 +1383,7 @@ void DolphinMainWindow::toggleEditLocation()
 
 void DolphinMainWindow::replaceLocation()
 {
-    KUrlNavigator *navigator = m_activeViewContainer->urlNavigator();
+    DolphinUrlNavigator *navigator = m_activeViewContainer->urlNavigator();
     QLineEdit *lineEdit = navigator->editor()->lineEdit();
 
     // If the text field currently has focus and everything is selected,
@@ -2989,6 +3016,9 @@ void DolphinMainWindow::connectViewSignals(DolphinViewContainer *container)
     toggleSelectionModeAction->setChecked(m_activeViewContainer->isSelectionModeEnabled());
     connect(m_activeViewContainer, &DolphinViewContainer::selectionModeChanged, toggleSelectionModeAction, &QAction::setChecked);
 
+    // shellkit fork: a page's selection only feeds the panels; the commands keep acting on the view.
+    connect(container, &DolphinViewContainer::pageSelectionChanged, this, &DolphinMainWindow::selectionChanged);
+
     const DolphinView *view = container->view();
     connect(view, &DolphinView::selectionChanged, this, &DolphinMainWindow::slotSelectionChanged);
     connect(view, &DolphinView::requestItemInfo, this, &DolphinMainWindow::requestItemInfo);
@@ -3457,6 +3487,24 @@ void DolphinMainWindow::setupShellkitActions()
     spacerAction->setDefaultWidget(spacer);
     ac->addAction(QStringLiteral("shellkit_spacer"), spacerAction);
 
+    // Search results: "Search options" (Date modified, Kind, Size, Advanced options) and
+    // "Close search", as in the Windows 11 command bar. Shown only while searching.
+    auto searchOptions = new KActionMenu(QIcon::fromTheme(QStringLiteral("view-filter")), i18ndc(shellkitDomain, "@action:intoolbar", "Search options"), this);
+    searchOptions->setPopupMode(QToolButton::InstantPopup);
+    searchOptions->setVisible(false);
+    connect(searchOptions->menu(), &QMenu::aboutToShow, this, [this, searchOptions]() {
+        fillSearchOptionsMenu(searchOptions->menu());
+    });
+    ac->addAction(QStringLiteral("shellkit_search_options"), searchOptions);
+    auto closeSearch = new QAction(QIcon::fromTheme(QStringLiteral("window-close")), i18ndc(shellkitDomain, "@action:intoolbar", "Close search"), this);
+    closeSearch->setVisible(false);
+    connect(closeSearch, &QAction::triggered, this, [this]() {
+        m_searchTimer->stop();
+        m_searchBox->clear();
+        m_activeViewContainer->startSearch(QString());
+    });
+    ac->addAction(QStringLiteral("shellkit_close_search"), closeSearch);
+
     // Address row: search box after the breadcrumb. Searching starts after a short pause in
     // typing or on Enter; an emptied box goes back to the folder.
     m_searchBox = new QLineEdit(this);
@@ -3481,6 +3529,37 @@ void DolphinMainWindow::setupShellkitActions()
         m_activeViewContainer->startSearch(m_searchBox->text());
     });
     connect(this, &DolphinMainWindow::urlChanged, this, &DolphinMainWindow::updateSearchBox);
+
+    setupShellkitPanes();
+
+    // Windows shortcuts on top of the KDE ones: Ctrl+Shift+N new folder, Ctrl+E search,
+    // F4 the address bar's list.
+    if (QAction *newFolder = ac->action(QStringLiteral("create_dir"))) {
+        // Recent KDE Frameworks already give it Ctrl+Shift+N; a duplicate would be ambiguous.
+        const QKeySequence windowsKey(Qt::CTRL | Qt::SHIFT | Qt::Key_N);
+        if (!newFolder->shortcuts().contains(windowsKey)) {
+            ac->setDefaultShortcuts(newFolder, QList<QKeySequence>{windowsKey} + newFolder->shortcuts());
+        }
+    }
+    if (QAction *find = ac->action(KStandardAction::name(KStandardAction::Find))) {
+        ac->setDefaultShortcuts(find, {Qt::CTRL | Qt::Key_F, Qt::CTRL | Qt::Key_E});
+    }
+    if (QAction *terminal = ac->action(QStringLiteral("show_terminal_panel"))) {
+        // F4 is the address bar's list in Windows; the terminal panel keeps its menu entry.
+        ac->setDefaultShortcuts(terminal, {});
+    }
+    auto addressList = ac->addAction(QStringLiteral("shellkit_address_list"));
+    addressList->setText(i18ndc(shellkitDomain, "@action", "Show the address bar list"));
+    ac->setDefaultShortcut(addressList, Qt::Key_F4);
+    connect(addressList, &QAction::triggered, this, [this]() {
+        DolphinUrlNavigator *navigator = m_activeViewContainer->urlNavigator();
+        if (!navigator) {
+            return;
+        }
+        navigator->setUrlEditable(true);
+        navigator->setFocus();
+        navigator->editor()->showPopup();
+    });
 
     if (shellkitWin7()) {
         setupShellkitWin7Actions();
@@ -3508,6 +3587,17 @@ void DolphinMainWindow::setupShellkitTabRow()
     placeShellkitTabRow();
 }
 
+// The tab row sits on the darker of the window and view colours, the selected tab and the
+// address row under it on the lighter one, whichever way round the colour scheme has them
+// (Breeze Dark's view colour is darker than its window colour).
+static QColor shellkitTabRowColor(const QPalette &palette, QPalette::ColorGroup group, bool raised)
+{
+    const QColor window = palette.color(group, QPalette::Window);
+    const QColor base = palette.color(group, QPalette::Base);
+    const bool baseLighter = base.lightness() >= window.lightness();
+    return (raised == baseLighter) ? base : window;
+}
+
 void DolphinMainWindow::applyShellkitLayers()
 {
     // Windows 11 layers: the tab row on the window background, the address row on a raised
@@ -3523,7 +3613,16 @@ void DolphinMainWindow::applyShellkitLayers()
     }
     setPalette(bodyPalette);
     if (auto tabRow = findChild<QToolBar *>(QStringLiteral("shellkitTabRow"), Qt::FindDirectChildrenOnly)) {
-        tabRow->setPalette(appPalette);
+        QPalette tabPalette = appPalette;
+        if (!shellkitWin7()) {
+            for (const auto group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
+                tabPalette.setColor(group, QPalette::Window, shellkitTabRowColor(appPalette, group, false));
+                tabPalette.setColor(group, QPalette::Base, shellkitTabRowColor(appPalette, group, true));
+            }
+        }
+        tabRow->setPalette(tabPalette);
+        // A tool bar fills with the button colour; the row wants the window one.
+        tabRow->setBackgroundRole(QPalette::Window);
         // Windows 7: the row is part of the glass that paintEvent() draws.
         tabRow->setAutoFillBackground(!shellkitWin7());
     }
@@ -3613,6 +3712,73 @@ void DolphinMainWindow::placeShellkitTabRow()
     tabRow->show();
 }
 
+void DolphinMainWindow::setupShellkitPanes()
+{
+#if HAVE_BALOO
+    auto infoDock = findChild<QDockWidget *>(QStringLiteral("infoDock"));
+    auto infoPanel = infoDock ? qobject_cast<InformationPanel *>(infoDock->widget()) : nullptr;
+    if (!infoPanel) {
+        return;
+    }
+    if (shellkitWin7()) {
+        // The Windows 7 preview pane; its details pane runs along the bottom.
+        infoPanel->setPreviewMode(true);
+        return;
+    }
+
+    // Windows 11 "Details pane" (Alt+Shift+P) and "Preview pane" (Alt+P): two modes of the
+    // Information panel, at most one of them shown.
+    KActionCollection *ac = actionCollection();
+    infoPanel->setPreviewMode(KConfigGroup(KSharedConfig::openConfig(), QStringLiteral("Shellkit")).readEntry("PreviewPane", false));
+    auto detailsPane = ac->add<KToggleAction>(QStringLiteral("shellkit_show_details_pane"));
+    detailsPane->setIcon(QIcon::fromTheme(QStringLiteral("documentinfo")));
+    detailsPane->setText(i18ndc(shellkitDomain, "@action:inmenu Layout", "Details pane"));
+    detailsPane->setIconText(i18ndc(shellkitDomain, "@action:intoolbar Details pane", "Details"));
+    ac->setDefaultShortcut(detailsPane, Qt::ALT | Qt::SHIFT | Qt::Key_P);
+    auto previewPane = ac->add<KToggleAction>(QStringLiteral("shellkit_show_preview_pane"));
+    previewPane->setIcon(QIcon::fromTheme(QStringLiteral("view-preview")));
+    previewPane->setText(i18ndc(shellkitDomain, "@action:inmenu Layout", "Preview pane"));
+    ac->setDefaultShortcut(previewPane, Qt::ALT | Qt::Key_P);
+
+    const auto sync = [infoDock, infoPanel, detailsPane, previewPane]() {
+        const bool shown = infoDock->toggleViewAction()->isChecked();
+        detailsPane->setChecked(shown && !infoPanel->previewMode());
+        previewPane->setChecked(shown && infoPanel->previewMode());
+    };
+    const auto showPane = [infoDock, infoPanel, sync](bool preview, bool shown) {
+        if (shown) {
+            infoPanel->setPreviewMode(preview);
+            KConfigGroup group(KSharedConfig::openConfig(), QStringLiteral("Shellkit"));
+            group.writeEntry("PreviewPane", preview);
+            group.sync();
+        }
+        infoDock->setVisible(shown);
+        sync();
+    };
+    connect(detailsPane, &QAction::triggered, this, [showPane](bool shown) {
+        showPane(false, shown);
+    });
+    connect(previewPane, &QAction::triggered, this, [showPane](bool shown) {
+        showPane(true, shown);
+    });
+    connect(infoDock->toggleViewAction(), &QAction::toggled, this, sync);
+    sync();
+
+    // View > Show, as in Windows 11.
+    auto viewMode = static_cast<KSelectAction *>(ac->action(QStringLiteral("view_mode")));
+    QMenu *viewMenu = viewMode->menu();
+    viewMenu->addSeparator();
+    QMenu *showMenu = viewMenu->addMenu(QIcon::fromTheme(QStringLiteral("view-visible")),
+                                        i18ndc(shellkitDomain, "@title:menu Which panes and items the window shows", "Show"));
+    for (QAction *action : {ac->action(QStringLiteral("show_navigation_panel")), static_cast<QAction *>(detailsPane), static_cast<QAction *>(previewPane),
+                            ac->action(QStringLiteral("show_hidden_files"))}) {
+        if (action) {
+            showMenu->addAction(action);
+        }
+    }
+#endif
+}
+
 void DolphinMainWindow::setupShellkitWin7Actions()
 {
     KActionCollection *ac = actionCollection();
@@ -3630,9 +3796,14 @@ void DolphinMainWindow::setupShellkitWin7Actions()
     });
 
     // The Information panel on the right is what Windows 7 calls the preview pane.
+    // The action is the dock's toggle action, which takes its text from the dock's title.
     QAction *previewPane = ac->action(QStringLiteral("show_information_panel"));
     if (previewPane) {
+        if (auto infoDock = findChild<QDockWidget *>(QStringLiteral("infoDock"))) {
+            infoDock->setWindowTitle(i18ndc(shellkitDomain, "@action:inmenu Layout", "Preview pane"));
+        }
         previewPane->setText(i18ndc(shellkitDomain, "@action:inmenu Layout", "Preview pane"));
+        ac->setDefaultShortcut(previewPane, Qt::ALT | Qt::Key_P);
     }
 
     // "Organize": the edit commands, the layout of the window, options, file commands, Close.
@@ -3729,7 +3900,7 @@ void DolphinMainWindow::paintEvent(QPaintEvent *event)
     }
     const QRect layer(0, tabRow->geometry().bottom() + 1, width(), commandBar->geometry().bottom() - tabRow->geometry().bottom());
     QPainter painter(this);
-    painter.fillRect(layer.adjusted(0, 0, 0, -commandBar->height()), QApplication::palette(this).color(QPalette::Base));
+    painter.fillRect(layer.adjusted(0, 0, 0, -commandBar->height()), shellkitTabRowColor(QApplication::palette(this), QPalette::Active, true));
     // Hairlines above and below the command bar.
     QColor divider = palette().color(QPalette::WindowText);
     divider.setAlphaF(palette().color(QPalette::Window).lightness() < 128 ? 0.14 : 0.1);
@@ -3737,9 +3908,107 @@ void DolphinMainWindow::paintEvent(QPaintEvent *event)
     painter.fillRect(QRect(0, layer.bottom(), width(), 1), divider);
 }
 
+void DolphinMainWindow::fillSearchOptionsMenu(QMenu *menu)
+{
+    using Options = KFileItemModelFilter::SearchOptions;
+    menu->clear();
+    DolphinView *view = m_activeViewContainer->view();
+    const Options current = view->searchOptions();
+
+    // One choice per group; choosing the checked one again clears it, as in Windows.
+    const auto addGroup = [this, menu, view](const QIcon &icon, const QString &title, const QList<std::pair<int, QString>> &choices, int checked,
+                                             const std::function<void(Options &, int)> &apply) {
+        QMenu *submenu = menu->addMenu(icon, title);
+        auto group = new QActionGroup(submenu);
+        for (const auto &[value, text] : choices) {
+            QAction *action = submenu->addAction(text);
+            action->setCheckable(true);
+            action->setChecked(value == checked);
+            action->setActionGroup(group);
+            const bool wasChecked = value == checked;
+            connect(action, &QAction::triggered, this, [view, value, wasChecked, apply]() {
+                Options options = view->searchOptions();
+                apply(options, wasChecked ? 0 : value);
+                view->setSearchOptions(options);
+            });
+        }
+    };
+
+    addGroup(QIcon::fromTheme(QStringLiteral("view-calendar")),
+             i18ndc(shellkitDomain, "@title:menu", "Date modified"),
+             {
+                 {Options::Today, i18ndc(shellkitDomain, "@item:inmenu Date modified", "Today")},
+                 {Options::Yesterday, i18ndc(shellkitDomain, "@item:inmenu Date modified", "Yesterday")},
+                 {Options::ThisWeek, i18ndc(shellkitDomain, "@item:inmenu Date modified", "This week")},
+                 {Options::LastWeek, i18ndc(shellkitDomain, "@item:inmenu Date modified", "Last week")},
+                 {Options::ThisMonth, i18ndc(shellkitDomain, "@item:inmenu Date modified", "This month")},
+                 {Options::LastMonth, i18ndc(shellkitDomain, "@item:inmenu Date modified", "Last month")},
+                 {Options::ThisYear, i18ndc(shellkitDomain, "@item:inmenu Date modified", "This year")},
+                 {Options::LastYear, i18ndc(shellkitDomain, "@item:inmenu Date modified", "Last year")},
+             },
+             current.date,
+             [](Options &options, int value) {
+                 options.date = Options::Date(value);
+             });
+    addGroup(QIcon::fromTheme(QStringLiteral("document-properties")),
+             i18ndc(shellkitDomain, "@title:menu File kind", "Kind"),
+             {
+                 {Options::Calendar, i18ndc(shellkitDomain, "@item:inmenu File kind", "Calendar")},
+                 {Options::Contact, i18ndc(shellkitDomain, "@item:inmenu File kind", "Contact")},
+                 {Options::Document, i18ndc(shellkitDomain, "@item:inmenu File kind", "Document")},
+                 {Options::Email, i18ndc(shellkitDomain, "@item:inmenu File kind", "Email")},
+                 {Options::Folder, i18ndc(shellkitDomain, "@item:inmenu File kind", "Folder")},
+                 {Options::Link, i18ndc(shellkitDomain, "@item:inmenu File kind", "Link")},
+                 {Options::Music, i18ndc(shellkitDomain, "@item:inmenu File kind", "Music")},
+                 {Options::Picture, i18ndc(shellkitDomain, "@item:inmenu File kind", "Picture")},
+                 {Options::Playlist, i18ndc(shellkitDomain, "@item:inmenu File kind", "Playlist")},
+                 {Options::Program, i18ndc(shellkitDomain, "@item:inmenu File kind", "Program")},
+                 {Options::Video, i18ndc(shellkitDomain, "@item:inmenu File kind", "Video")},
+             },
+             current.kind,
+             [](Options &options, int value) {
+                 options.kind = Options::Kind(value);
+             });
+    addGroup(QIcon::fromTheme(QStringLiteral("drive-harddisk")),
+             i18ndc(shellkitDomain, "@title:menu File size", "Size"),
+             {
+                 {Options::Empty, i18ndc(shellkitDomain, "@item:inmenu File size", "Empty (0 KB)")},
+                 {Options::Tiny, i18ndc(shellkitDomain, "@item:inmenu File size", "Tiny (0 - 16 KB)")},
+                 {Options::Small, i18ndc(shellkitDomain, "@item:inmenu File size", "Small (16 KB - 1 MB)")},
+                 {Options::Medium, i18ndc(shellkitDomain, "@item:inmenu File size", "Medium (1 - 128 MB)")},
+                 {Options::Large, i18ndc(shellkitDomain, "@item:inmenu File size", "Large (128 MB - 1 GB)")},
+                 {Options::Huge, i18ndc(shellkitDomain, "@item:inmenu File size", "Huge (1 - 4 GB)")},
+                 {Options::Gigantic, i18ndc(shellkitDomain, "@item:inmenu File size", "Gigantic (> 4 GB)")},
+             },
+             current.size,
+             [](Options &options, int value) {
+                 options.size = Options::Size(value);
+             });
+
+    // Advanced options: search file contents too (a new search, kept by the search URL).
+    menu->addSeparator();
+    QMenu *advanced = menu->addMenu(QIcon::fromTheme(QStringLiteral("configure")), i18ndc(shellkitDomain, "@title:menu", "Advanced options"));
+    const QUrl url = view->url();
+    const Search::DolphinQuery query(url, url);
+    QAction *contents = advanced->addAction(i18ndc(shellkitDomain, "@item:inmenu Search option", "File contents"));
+    contents->setCheckable(true);
+    contents->setChecked(query.searchThrough() == Search::SearchThrough::FileContents);
+    connect(contents, &QAction::toggled, this, [this, url](bool checked) {
+        Search::DolphinQuery changed(url, url);
+        changed.setSearchThrough(checked ? Search::SearchThrough::FileContents : Search::SearchThrough::FileNames);
+        m_activeViewContainer->setUrl(changed.toUrl());
+    });
+}
+
 void DolphinMainWindow::updateSearchBox(const QUrl &url)
 {
-    if (!m_searchBox || isSearchUrl(url)) {
+    const bool searching = isSearchUrl(url);
+    for (const char *name : {"shellkit_search_options", "shellkit_close_search"}) {
+        if (QAction *action = actionCollection()->action(QLatin1String(name))) {
+            action->setVisible(searching);
+        }
+    }
+    if (!m_searchBox || searching) {
         return;
     }
     m_searchTimer->stop();

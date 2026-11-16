@@ -25,6 +25,25 @@ class QRegularExpression;
 class DOLPHIN_EXPORT KFileItemModelFilter
 {
 public:
+    /**
+     * shellkit fork: the search options of Windows (Date modified, Kind, Size), applied to the
+     * items of a search whichever search tool found them.
+     */
+    struct SearchOptions {
+        enum Date { AnyDate, Today, Yesterday, ThisWeek, LastWeek, ThisMonth, LastMonth, ThisYear, LastYear };
+        enum Kind { AnyKind, Calendar, Contact, Document, Email, Folder, Link, Music, Picture, Playlist, Program, Video };
+        enum Size { AnySize, Empty, Tiny, Small, Medium, Large, Huge, Gigantic };
+        Date date = AnyDate;
+        Kind kind = AnyKind;
+        Size size = AnySize;
+
+        bool isEmpty() const
+        {
+            return date == AnyDate && kind == AnyKind && size == AnySize;
+        }
+        bool operator==(const SearchOptions &) const = default;
+    };
+
     KFileItemModelFilter();
     virtual ~KFileItemModelFilter();
 
@@ -74,6 +93,9 @@ public:
     void setExcludeMimeTypes(const QStringList &types);
     QStringList excludeMimeTypes() const;
 
+    void setSearchOptions(const SearchOptions &options);
+    SearchOptions searchOptions() const;
+
     /**
      * @return True if either the pattern or mimetype filters has been set.
      */
@@ -96,6 +118,9 @@ private:
      */
     bool matchesType(const KFileItem &item) const;
 
+    /** @return True if item matches the options set by @ref setSearchOptions. */
+    bool matchesSearchOptions(const KFileItem &item) const;
+
     /**
      * Instantiate and configure m_regExp according to m_filterMode and m_caseSensitive.
      */
@@ -110,5 +135,6 @@ private:
     QString m_pattern; // Property set by setPattern().
     QStringList m_mimeTypes; // Property set by setMimeTypes()
     QStringList m_excludeMimeTypes; // Property set by setExcludeMimeTypes()
+    SearchOptions m_searchOptions; // Property set by setSearchOptions()
 };
 #endif

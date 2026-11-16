@@ -1092,6 +1092,29 @@ void DolphinViewContainer::setPageShown(const QUrl &pageUrl)
                 m_statusBar->setDefaultText(i18ndcp(shellkitDomain, "@info:status", "%1 item", "%1 items", page->itemCount()));
             }
         });
+        connect(page, &ShellkitPage::selectionChanged, this, [this, page](const KFileItemList &items) {
+            if (m_page != page) {
+                return;
+            }
+            // The same wording as DolphinView::emitStatusBarText.
+            QString text = i18ndcp(shellkitDomain, "@info:status", "%1 item", "%1 items", page->itemCount());
+            if (!items.isEmpty()) {
+                text += QStringLiteral("    ") + i18ndcp(shellkitDomain, "@info:status", "%1 item selected", "%1 items selected", items.count());
+                KIO::filesize_t size = 0;
+                bool hasFiles = false;
+                for (const KFileItem &item : items) {
+                    if (!item.isDir()) {
+                        hasFiles = true;
+                        size += item.size();
+                    }
+                }
+                if (hasFiles) {
+                    text += QStringLiteral("  ") + shellkitStatusSize(size);
+                }
+            }
+            m_statusBar->setDefaultText(text);
+            Q_EMIT pageSelectionChanged(items);
+        });
     };
     ShellkitPage *page = nullptr;
     if (isShellkitHomeUrl(pageUrl)) {

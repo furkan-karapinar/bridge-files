@@ -191,6 +191,12 @@ public:
     void markUrlAsCurrent(const QUrl &url);
 
     /**
+     * shellkit fork: selects \p url as soon as it is in the view and starts renaming it, as
+     * Windows does with a new compressed folder. Gives up after a while if it never shows up.
+     */
+    void selectAndRename(const QUrl &url);
+
+    /**
      * All items that match the regular expression \a regexp will get selected
      * if \a enabled is true and deselected if \a enabled is false.
      *
@@ -283,6 +289,13 @@ public:
      * will be shown.
      */
     void setMimeTypeFilters(const QStringList &filters);
+
+    /**
+     * shellkit fork: the Windows search options (Date modified, Kind, Size) for the items of a
+     * search. They are kept while the view shows searches and cleared when it leaves them.
+     */
+    void setSearchOptions(const KFileItemModelFilter::SearchOptions &options);
+    KFileItemModelFilter::SearchOptions searchOptions() const;
     QStringList mimeTypeFilters() const;
 
     /**

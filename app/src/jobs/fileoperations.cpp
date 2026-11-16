@@ -6,6 +6,7 @@
 
 #include "fileoperations.h"
 
+#include "conflictdialog.h"
 #include "copyprogressdialog.h"
 #include "shellkit.h"
 
@@ -14,6 +15,7 @@
 #include <KIO/DeleteOrTrashJob>
 #include <KIO/FileUndoManager>
 #include <KIO/Global>
+#include <KIO/JobUiDelegate>
 #include <KIO/JobUiDelegateFactory>
 #include <KJobUiDelegate>
 #include <KJobWidgets>
@@ -45,6 +47,16 @@ constexpr TypeEntry typeNames[] = {
     {FileOps::Type::Trash, "trash"},
     {FileOps::Type::Delete, "delete"},
     {FileOps::Type::EmptyTrash, "emptytrash"},
+};
+
+// KIO's widget delegate with our own "ask the user" handler; its constructor is protected.
+class ShellkitJobUiDelegate : public KIO::JobUiDelegate
+{
+public:
+    ShellkitJobUiDelegate(KJobUiDelegate::Flags flags, QWidget *window, KIO::AskUserActionInterface *askUser)
+        : KIO::JobUiDelegate(flags, window, {askUser})
+    {
+    }
 };
 }
 
@@ -115,7 +127,8 @@ FileOperationRunner::start(FileOps::Type type, const QList<QUrl> &sources, const
             job->setAutoRename(true);
             break;
         }
-        job->setUiDelegate(KIO::createDefaultJobUiDelegate(flags, window));
+        // shellkit fork: "Replace or Skip Files" as on Windows (ConflictHandler).
+        job->setUiDelegate(new ShellkitJobUiDelegate(flags, window, new ConflictHandler(runner)));
         KJobWidgets::setWindow(job, window);
 
         connect(job, &KIO::CopyJob::copyingDone, runner, [runner](KIO::Job *, const QUrl &, const QUrl &to, const QDateTime &, bool, bool) {

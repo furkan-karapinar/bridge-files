@@ -13,6 +13,7 @@
 #include "shellkit.h"
 
 #include <KAboutData>
+#include <KConfig>
 #include <KCrash>
 #include <KIconTheme>
 #include <KLocalizedString>
@@ -59,6 +60,8 @@ int main(int argc, char **argv)
     // Its windows belong to the File Explorer on the taskbar.
     aboutData.setDesktopFileName(QStringLiteral("org.shellkit.files"));
     KAboutData::setApplicationData(aboutData);
+    // The settings (copy dialog layout, Windows 7 look) are the File Explorer's.
+    KConfig::setMainConfigName(QStringLiteral("shellkit-filesrc"));
     KCrash::initialize();
 
     QDBusConnection bus = QDBusConnection::sessionBus();

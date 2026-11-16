@@ -61,6 +61,22 @@ Turkish translation.
   the window, as on Windows. Only File Explorer uses it without asking; any other program that
   asks it for a file operation gets an "Allow / Deny" window for every request.
 - A plain drop onto another drive copies the files straight away, with no menu asking what to do.
+  Files can also be dropped onto folders in the navigation pane.
+- When a file already exists, a "Replace or Skip Files" window: replace, skip, or compare the
+  files side by side and choose which to keep.
+- Several copies at once share one window, each with its own progress row.
+- A Windows-style Properties window for local files: General (type, opens with, location, size,
+  size on disk, dates, Read-only and Hidden) and Security (owner, group and everyone).
+- Compressed (zipped) folders: "Compress to ZIP file", "Extract All…", and opening a zip file like
+  a folder.
+- Address bar: the arrows between path parts open folder lists with icons; the first one lists
+  Home, Gallery, your folders, This PC, Network and the Recycle Bin.
+- In search results, "Search options" (Date modified, Kind, Size, File contents) and
+  "Close search".
+- A preview pane (Alt+P) next to the details pane (Alt+Shift+P), under View > Show. It shows
+  pictures, videos, PDFs and the text of text files.
+- Windows keyboard shortcuts: Ctrl+Shift+N new folder, Ctrl+E search, F4 the address bar list,
+  Alt+D the address bar, Alt+Enter Properties.
 
 **Windows 7 look (optional)**
 
@@ -85,7 +101,7 @@ On Fedora, the packages Dolphin itself is built with, plus the window decoration
 
 ```bash
 sudo dnf builddep dolphin
-sudo dnf install git cmake ninja-build gcc-c++ extra-cmake-modules kdecoration-devel kf6-kcoreaddons-devel
+sudo dnf install git cmake ninja-build gcc-c++ extra-cmake-modules kdecoration-devel kf6-kcoreaddons-devel zlib-devel
 ```
 
 On other distributions, install the development packages of Dolphin's dependencies (KIO,
@@ -135,13 +151,14 @@ The app itself follows your system colours, icons and fonts.
 
 ## Known limitations
 
-- Some KDE dialogs (Properties, the settings window) keep their KDE layout.
+- Some KDE dialogs (the settings window, Open With, Properties for remote places and drives)
+  keep their KDE layout.
 - The Network page sees only devices that announce themselves over mDNS/DNS-SD or that talked
   to your computer lately. Windows PCs show up only if they announce themselves that way.
 - Emptying the trash shows no progress window. Undo for operations in the service lasts only
   while File Explorer is open (the service quits about a minute after the last window closes).
-- In the Windows 7 look, the preview pane keeps the Dolphin layout and Libraries are your user
-  folders, not real libraries.
+- In the Windows 7 look, Libraries are your user folders, not real libraries.
+- The preview pane shows pictures, videos, PDFs and text; other files show their icon.
 - Internally the app is still called `shellkit-files` (binary, settings file `shellkit-filesrc`,
   app id `org.shellkit.files`). It started as part of a larger project, shellkit.
 

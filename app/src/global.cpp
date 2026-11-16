@@ -15,6 +15,7 @@
 #include <KDialogJobUiDelegate>
 #include <KIO/ApplicationLauncherJob>
 #include <KService>
+#include <KShell>
 #include <KWindowSystem>
 
 #include <QApplication>
@@ -41,7 +42,8 @@ QUrl Dolphin::homeUrl()
 
 void Dolphin::openNewWindow(const QList<QUrl> &urls, QWidget *window, const OpenNewWindowFlags &flags)
 {
-    QString command = QStringLiteral("dolphin --new-window");
+    // shellkit fork: this program, not the system's "dolphin".
+    QString command = KShell::quoteArg(QCoreApplication::applicationFilePath()) + QLatin1String(" --new-window");
 
     if (flags.testFlag(OpenNewWindowFlag::Select)) {
         command.append(QLatin1String(" --select"));

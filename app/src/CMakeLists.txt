@@ -117,6 +117,9 @@ target_sources(dolphinprivate PRIVATE
     views/dolphinviewactionhandler.cpp
     views/draganddrophelper.cpp
     jobs/copyprogressdialog.cpp
+    jobs/conflictdialog.cpp
+    jobs/propertiesdialog.cpp
+    jobs/compressedfolders.cpp
     jobs/fileoperations.cpp
     views/versioncontrol/updateitemstatesthread.cpp
     views/versioncontrol/versioncontrolobserver.cpp
@@ -173,6 +176,9 @@ target_sources(dolphinprivate PRIVATE
     views/dolphinviewactionhandler.h
     views/draganddrophelper.h
     jobs/copyprogressdialog.h
+    jobs/conflictdialog.h
+    jobs/propertiesdialog.h
+    jobs/compressedfolders.h
     jobs/fileoperations.h
     views/versioncontrol/updateitemstatesthread.h
     views/versioncontrol/versioncontrolobserver.h
@@ -241,6 +247,7 @@ target_link_libraries(
     KF6::KCMUtils
     KF6::FileMetaData
     KF6::ColorScheme
+    ZLIB::ZLIB
 
     ${FTS_LIB}
 )

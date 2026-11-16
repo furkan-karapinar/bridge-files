@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!DOCTYPE gui SYSTEM "kpartgui.dtd">
-<gui name="dolphin" version="50">
+<gui name="dolphin" version="52">
     <MenuBar>
         <Menu name="file">
             <Action name="new_menu" />
@@ -130,9 +130,11 @@
         <Action name="sort" />
         <Action name="view_mode" />
         <Separator />
+        <Action name="shellkit_search_options" />
+        <Action name="shellkit_close_search" />
         <Action name="hamburger_menu" />
         <Action name="shellkit_spacer" />
-        <Action name="show_information_panel" />
+        <Action name="shellkit_show_details_pane" />
     </ToolBar>
     <ActionProperties scheme="Default">
         <Action priority="0" name="go_back"/>

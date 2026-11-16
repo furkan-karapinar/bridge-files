@@ -121,6 +121,25 @@ bool InformationPanel::urlChanged()
     return true;
 }
 
+void InformationPanel::setPreviewMode(bool previewMode)
+{
+    if (m_previewMode == previewMode) {
+        return;
+    }
+    m_previewMode = previewMode;
+    if (m_content) {
+        m_content->setPreviewMode(previewMode);
+        if (isVisible()) {
+            showItemInfo();
+        }
+    }
+}
+
+bool InformationPanel::previewMode() const
+{
+    return m_previewMode;
+}
+
 void InformationPanel::showEvent(QShowEvent *event)
 {
     Panel::showEvent(event);
@@ -426,6 +445,7 @@ void InformationPanel::init()
 #endif
 
     m_content = new InformationPanelContent(this);
+    m_content->setPreviewMode(m_previewMode);
     connect(m_content, &InformationPanelContent::urlActivated, this, &InformationPanel::urlActivated);
     connect(m_content, &InformationPanelContent::configurationFinished, this, [this]() {
         m_inConfigurationMode = false;

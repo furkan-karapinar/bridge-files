@@ -123,6 +123,15 @@ void fillRounded(QPainter *painter, const QRectF &rect, const QColor &color, qre
     painter->restore();
 }
 
+// Menus with icons and checkable items get a check column left of the icons; Fusion would only
+// frame the icon of a checked item.
+constexpr int MenuCheckWidth = 20;
+
+bool hasMenuCheckColumn(const QStyleOptionMenuItem &item)
+{
+    return item.menuHasCheckableItems && item.maxIconWidth > 0 && item.menuItemType != QStyleOptionMenuItem::Separator;
+}
+
 void drawChevron(QPainter *painter, const QRectF &rect, Qt::ArrowType direction, const QColor &color)
 {
     const QPointF c = rect.center();
@@ -444,9 +453,37 @@ void Style::drawControl(ControlElement element, const QStyleOption *option, QPai
         QStyleOptionMenuItem plain(*item);
         const bool selected = (item->state & State_Selected) && (item->state & State_Enabled);
         plain.state &= ~State_Selected;
+        const bool checkColumn = hasMenuCheckColumn(*item);
+        if (checkColumn) {
+            // Windows 11 marks the state in a column of its own, left of the icon.
+            plain.rect.adjust(MenuCheckWidth, 0, 0, 0);
+            plain.checkType = QStyleOptionMenuItem::NotCheckable;
+            plain.checked = false;
+        }
         QProxyStyle::drawControl(element, &plain, painter, widget);
         if (selected) {
             fillRounded(painter, QRectF(option->rect).adjusted(0, 1, 0, -1), subtleHover(option->palette));
+        }
+        if (checkColumn && item->checked && item->checkType != QStyleOptionMenuItem::NotCheckable) {
+            const QRect r = option->rect;
+            const QPointF c(r.left() + MenuCheckWidth / 2.0 + 4, r.center().y() + 0.5);
+            const QColor color = option->palette.color((item->state & State_Enabled) ? QPalette::Active : QPalette::Disabled, QPalette::WindowText);
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing);
+            if (item->checkType == QStyleOptionMenuItem::Exclusive) {
+                painter->setPen(Qt::NoPen);
+                painter->setBrush(color);
+                painter->drawEllipse(c, 3, 3);
+            } else {
+                QPainterPath path;
+                path.moveTo(c.x() - 4.5, c.y());
+                path.lineTo(c.x() - 1.5, c.y() + 3);
+                path.lineTo(c.x() + 4.5, c.y() - 3.5);
+                painter->setPen(QPen(color, 1.3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                painter->setBrush(Qt::NoBrush);
+                painter->drawPath(path);
+            }
+            painter->restore();
         }
         return;
     }
@@ -714,7 +751,7 @@ QSize Style::sizeFromContents(ContentsType type, const QStyleOption *option, con
             result.setHeight(9);
         } else {
             result.setHeight(qMax(result.height(), MenuItemHeight));
-            result.rwidth() += 16;
+            result.rwidth() += 16 + (hasMenuCheckColumn(*item) ? MenuCheckWidth : 0);
         }
         break;
     }

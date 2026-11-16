@@ -11,15 +11,144 @@
 #include "dolphinplacesmodelsingleton.h"
 #include "dolphinurlnavigatorscontroller.h"
 #include "global.h"
+#include "shellkit.h"
 
+#include <KFilePlacesModel>
+#include <KIO/Global>
 #include <KLocalizedString>
 #include <KUrlComboBox>
 
 #include <QAbstractButton>
+#include <QApplication>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLayout>
 #include <QLineEdit>
+#include <QMenu>
+#include <QStandardPaths>
+
+#include <algorithm>
+
+namespace
+{
+/**
+ * shellkit fork: the address bar's menus as in Windows. The chevron at the left lists the
+ * top-level places (Home, Gallery, the user folders, This PC, Network, Recycle Bin) after the
+ * folders that do not fit, and the folder menus of the other chevrons have folder icons.
+ * KUrlNavigator builds these menus privately: they are completed when they are polished, just
+ * before they are laid out. The path menu opens the URL in an action's data, so added entries
+ * work as its own do.
+ */
+class NavigatorMenus : public QObject
+{
+public:
+    using QObject::QObject;
+
+    static void install()
+    {
+        static NavigatorMenus *menus = nullptr;
+        if (!menus) {
+            menus = new NavigatorMenus(qApp);
+            qApp->installEventFilter(menus);
+        }
+    }
+
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (event->type() == QEvent::Polish) {
+            if (auto menu = qobject_cast<QMenu *>(watched)) {
+                if (auto navigator = qobject_cast<KUrlNavigator *>(menu->parent())) {
+                    if (isPathMenu(menu)) {
+                        completePathMenu(menu, navigator);
+                    }
+                } else if (menu->inherits("KDEPrivate::KUrlNavigatorMenu")) {
+                    for (QAction *action : menu->actions()) {
+                        if (!action->isSeparator() && !action->menu() && action->icon().isNull()) {
+                            action->setIcon(QIcon::fromTheme(QStringLiteral("folder")));
+                        }
+                    }
+                }
+            }
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    static bool isPathMenu(const QMenu *menu)
+    {
+        // The path menu carries KUrlNavigatorPathSelectorEventFilter; the context menu does not.
+        const QList<QObject *> children = menu->children();
+        return std::any_of(children.cbegin(), children.cend(), [](const QObject *child) {
+            return child->inherits("KDEPrivate::KUrlNavigatorPathSelectorEventFilter");
+        });
+    }
+
+    static void completePathMenu(QMenu *menu, KUrlNavigator *navigator)
+    {
+        // Keep only the folders whose buttons do not fit, inside the place; the place itself
+        // and its parents (like Home's) are not hidden. KIO lists one entry per button from the
+        // place on, and the visible buttons are always the last ones.
+        const KFilePlacesModel *places = DolphinPlacesModelSingleton::instance().placesModel();
+        const QModelIndex placeIndex = places->closestItem(navigator->locationUrl());
+        const QUrl place = placeIndex.isValid() ? places->url(placeIndex) : QUrl();
+        const QList<QWidget *> buttons = navigator->findChildren<QWidget *>();
+        const auto visibleButtons = std::count_if(buttons.cbegin(), buttons.cend(), [navigator](const QWidget *button) {
+            return button->inherits("KDEPrivate::KUrlNavigatorButton") && button->isVisibleTo(navigator);
+        });
+        const QList<QAction *> actions = menu->actions();
+        const auto entries = std::count_if(actions.cbegin(), actions.cend(), [](const QAction *action) {
+            return !action->isSeparator();
+        });
+        auto hiddenEntries = entries - visibleButtons;
+        int kept = 0;
+        for (QAction *action : actions) {
+            const bool hidden = !action->isSeparator() && hiddenEntries-- > 0;
+            const QUrl url(action->data().toString());
+            if (hidden && (place.isEmpty() || place.isParentOf(url))) {
+                action->setText(action->text().trimmed());
+                action->setIcon(QIcon::fromTheme(QStringLiteral("folder")));
+                ++kept;
+            } else {
+                menu->removeAction(action);
+                action->deleteLater();
+            }
+        }
+        if (kept > 0) {
+            menu->addSeparator();
+        }
+
+        const auto add = [menu](const QIcon &icon, const QString &text, const QUrl &url) {
+            QAction *action = menu->addAction(icon, text);
+            action->setData(url.toString());
+        };
+        add(QIcon::fromTheme(QStringLiteral("go-home")), i18ndc(shellkitDomain, "@item:inlistbox Start page of the file explorer", "Home"), shellkitHomeUrl());
+        const QString pictures = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+        add(QIcon::fromTheme(QStringLiteral("folder-pictures")), i18ndc(shellkitDomain, "@item:inlistbox Photo collection", "Gallery"), QUrl::fromLocalFile(pictures));
+        menu->addSeparator();
+        const QUrl home = QUrl::fromLocalFile(QDir::homePath());
+        add(QIcon::fromTheme(QStringLiteral("user-home")), QFileInfo(QDir::homePath()).fileName(), home);
+        const QStandardPaths::StandardLocation userFolders[] = {
+            QStandardPaths::DesktopLocation,
+            QStandardPaths::DownloadLocation,
+            QStandardPaths::DocumentsLocation,
+            QStandardPaths::PicturesLocation,
+            QStandardPaths::MusicLocation,
+            QStandardPaths::MoviesLocation,
+        };
+        for (const auto location : userFolders) {
+            const QString path = QStandardPaths::writableLocation(location);
+            if (!path.isEmpty() && path != QDir::homePath() && QDir(path).exists()) {
+                const QUrl url = QUrl::fromLocalFile(path);
+                add(QIcon::fromTheme(KIO::iconNameForUrl(url)), QDir(path).dirName(), url);
+            }
+        }
+        menu->addSeparator();
+        add(QIcon::fromTheme(QStringLiteral("computer")), i18ndc(shellkitDomain, "@item:inlistbox", "This PC"), shellkitThisPcUrl());
+        add(QIcon::fromTheme(QStringLiteral("network-workgroup")), i18ndc(shellkitDomain, "@item:inlistbox", "Network"), shellkitNetworkUrl());
+        add(QIcon::fromTheme(QStringLiteral("user-trash")), i18ndc(shellkitDomain, "@item:inmenu", "Recycle Bin"), QUrl(QStringLiteral("trash:/")));
+    }
+};
+}
 
 DolphinUrlNavigator::DolphinUrlNavigator(QWidget *parent)
     : DolphinUrlNavigator(QUrl(), parent)
@@ -33,6 +162,7 @@ DolphinUrlNavigator::DolphinUrlNavigator(const QUrl &url, QWidget *parent)
     setUrlEditable(settings->editableUrl());
     setShowFullPath(settings->showFullPath());
     setHomeUrl(Dolphin::homeUrl());
+    NavigatorMenus::install();
     setPlacesSelectorVisible(DolphinUrlNavigatorsController::placesSelectorVisible());
     editor()->setCompletionMode(KCompletion::CompletionMode(settings->urlCompletionMode()));
     setWhatsThis(xi18nc("@info:whatsthis location bar",

@@ -5,11 +5,13 @@
  */
 
 #include "homepage.h"
+#include "jobs/propertiesdialog.h"
 
 #include "dolphinplacesmodelsingleton.h"
 #include "global.h"
 #include "shellkit.h"
 
+#include <KFileItem>
 #include <KFilePlacesModel>
 #include <KIO/JobUiDelegateFactory>
 #include <KIO/OpenUrlJob>
@@ -248,6 +250,30 @@ HomePage::HomePage(QWidget *parent)
             } else {
                 openFile(url);
             }
+        });
+    }
+
+    // One selection across the three sections, as in Windows; the details pane and the
+    // status bar follow it.
+    const QList<QAbstractItemView *> views{m_quickAccess, m_favorites, m_recent};
+    for (QAbstractItemView *view : views) {
+        connect(view->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this, view, views]() {
+            if (view->selectionModel()->hasSelection()) {
+                for (QAbstractItemView *other : views) {
+                    if (other != view) {
+                        other->clearSelection();
+                    }
+                }
+            }
+            KFileItemList items;
+            for (QAbstractItemView *each : views) {
+                for (const QModelIndex &index : each->selectionModel()->selectedIndexes()) {
+                    if (index.column() == 0) {
+                        items.append(KFileItem(index.data(UrlRole).toUrl()));
+                    }
+                }
+            }
+            Q_EMIT selectionChanged(items);
         });
     }
 
@@ -541,7 +567,7 @@ void HomePage::showContextMenu(QAbstractItemView *view, const QPoint &pos)
         QApplication::clipboard()->setText(shellkitPathText({url}));
     });
     menu.addAction(QIcon::fromTheme(QStringLiteral("document-properties")), i18nc("@action:inmenu File", "Properties"), this, [this, url]() {
-        KPropertiesDialog::showDialog(url, this);
+        PropertiesDialog::showProperties(QList<QUrl>{url}, this);
     });
     menu.exec(view->viewport()->mapToGlobal(pos));
 }

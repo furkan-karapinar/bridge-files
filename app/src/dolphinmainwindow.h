@@ -230,6 +230,12 @@ public Q_SLOTS:
      */
     void openNewWindow(const QUrl &url);
 
+    /** shellkit fork: "Compress to ZIP file", then renames the new file in the view. */
+    void compressToZip(const KFileItemList &items);
+
+    /** shellkit fork: "Extract All..." for an archive. */
+    void extractAll(const KFileItem &archive);
+
     /** @see GeneralSettings::splitViewChanged() */
     void slotSplitViewChanged();
 
@@ -728,6 +734,10 @@ private:
      * shellkit fork: clears the search box and names the current folder in it.
      */
     void updateSearchBox(const QUrl &url);
+    /** shellkit fork: the Details and Preview panes of Windows, and View > Show. */
+    void setupShellkitPanes();
+    /** shellkit fork: the Windows "Search options" menu of the active search. */
+    void fillSearchOptionsMenu(QMenu *menu);
 
     /**
      * Initializes or re-initializes the KFileItemActions instance.

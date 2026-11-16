@@ -5,6 +5,7 @@
  */
 
 #include "dbusinterface.h"
+#include "jobs/propertiesdialog.h"
 #include "dolphin_generalsettings.h"
 #include "global.h"
 
@@ -55,7 +56,7 @@ void DBusInterface::ShowItemProperties(const QStringList &uriList, const QString
     const QList<QUrl> urls = Dolphin::validateUris(uriList);
     if (!urls.isEmpty()) {
         KWindowSystem::setCurrentXdgActivationToken(startUpId);
-        KPropertiesDialog::showDialog(urls);
+        PropertiesDialog::showProperties(urls, nullptr);
     }
 }
 

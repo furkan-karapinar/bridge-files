@@ -76,6 +76,8 @@
 #include <QScrollBar>
 #include <QSize>
 #include <QTimer>
+
+#include <memory>
 #include <QToolTip>
 #include <QVBoxLayout>
 
@@ -477,6 +479,35 @@ void DolphinView::markUrlsAsSelected(const QList<QUrl> &urls)
     m_selectJobCreatedItems = false;
 }
 
+void DolphinView::selectAndRename(const QUrl &url)
+{
+    const auto apply = [this, url]() {
+        const int index = m_model->index(url);
+        if (index < 0) {
+            return false;
+        }
+        KItemListSelectionManager *selectionManager = m_container->controller()->selectionManager();
+        selectionManager->clearSelection();
+        selectionManager->setCurrentItem(index);
+        selectionManager->setSelected(index);
+        renameSelectedItems();
+        return true;
+    };
+    if (apply()) {
+        return;
+    }
+    // Wait for the directory watcher to add the item.
+    auto connection = std::make_shared<QMetaObject::Connection>();
+    *connection = connect(m_model, &KFileItemModel::itemsInserted, this, [apply, connection]() {
+        if (apply()) {
+            disconnect(*connection);
+        }
+    });
+    QTimer::singleShot(10000, this, [connection]() {
+        disconnect(*connection);
+    });
+}
+
 void DolphinView::markUrlAsCurrent(const QUrl &url)
 {
     m_currentItemUrl = url;
@@ -687,6 +718,16 @@ QString DolphinView::nameFilter() const
     return m_model->nameFilter();
 }
 
+void DolphinView::setSearchOptions(const KFileItemModelFilter::SearchOptions &options)
+{
+    m_model->setSearchOptions(options);
+}
+
+KFileItemModelFilter::SearchOptions DolphinView::searchOptions() const
+{
+    return m_model->searchOptions();
+}
+
 void DolphinView::setMimeTypeFilters(const QStringList &filters)
 {
     return m_model->setMimeTypeFilters(filters);
@@ -793,6 +834,13 @@ void DolphinView::setUrl(const QUrl &url)
     clearSelection();
 
     m_url = url;
+
+    // shellkit fork: the search options belong to searches.
+    // (The schemes of Search::isSupportedSearchScheme(), which is not in this library.)
+    static const QStringList searchSchemes = {QStringLiteral("filenamesearch"), QStringLiteral("baloosearch"), QStringLiteral("tags")};
+    if (!searchSchemes.contains(url.scheme())) {
+        m_model->setSearchOptions({});
+    }
 
     hideToolTip();
 

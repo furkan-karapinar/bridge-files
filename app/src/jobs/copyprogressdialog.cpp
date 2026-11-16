@@ -5,6 +5,7 @@
  */
 
 #include "copyprogressdialog.h"
+#include "compressedfolders.h"
 
 #include "dolphin_generalsettings.h"
 #include "shellkit.h"
@@ -19,25 +20,33 @@
 #include <KSharedConfig>
 #include <KWindowSystem>
 
+#include <QCloseEvent>
 #include <QDesktopServices>
+#include <QHash>
 #include <QLocale>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPointer>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QSet>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
 #include <algorithm>
+#include <functional>
+#include <memory>
 
 namespace
 {
 // Short copies finish without a window, as in Windows.
 constexpr int ShowDelay = 600;
+// Jobs that are asking the user something (ConflictHandler).
+QSet<KJob *> s_asking;
 // The layout fixes the dialog to its size hint, so the width comes from the content.
 constexpr int ContentWidth = 420;
 
@@ -235,7 +244,144 @@ private:
     QString m_speedText;
 };
 
+
+namespace
+{
+/** The line between two operations in one window. */
+class SeparatorLine : public QWidget
+{
+public:
+    explicit SeparatorLine(QWidget *parent)
+        : QWidget(parent)
+    {
+        setFixedHeight(1);
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        painter.fillRect(rect(), isDark(palette()) ? QColor(255, 255, 255, 18) : QColor(0, 0, 0, 20));
+    }
+};
+
+void setDetailsButton(QToolButton *button, bool shown)
+{
+    button->setIcon(glyphIcon(shown ? Glyph::ChevronUp : Glyph::ChevronDown, button->palette()));
+    button->setText(shown ? i18ndc(shellkitDomain, "@action:button", "Fewer details") : i18ndc(shellkitDomain, "@action:button", "More details"));
+}
+
+QToolButton *detailsButton(QWidget *parent)
+{
+    auto button = new QToolButton(parent);
+    button->setAutoRaise(true);
+    button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    return button;
+}
+
+KConfigGroup copyDialogConfig()
+{
+    return KConfigGroup(KSharedConfig::openConfig(QStringLiteral("shellkit-filesrc")), QStringLiteral("CopyDialog"));
+}
+}
+
+/** One operation in the copy dialog: its header, progress and details. */
+class CopyProgressItem : public QWidget
+{
+public:
+    CopyProgressItem(KIO::Job *job, bool classic, QWidget *parent);
+
+    KIO::Job *job() const
+    {
+        return m_job;
+    }
+
+    bool isRunning() const
+    {
+        return m_job && !m_jobDone;
+    }
+
+    QString title() const
+    {
+        return m_title;
+    }
+
+    void setSeparatorShown(bool shown)
+    {
+        m_separator->setVisible(shown);
+    }
+
+    void setDetailsShown(bool shown);
+
+    // Set by the dialog.
+    std::function<void(CopyProgressItem *)> finished;
+    std::function<void()> titleChanged;
+
+private:
+    void setupModern();
+    void setupClassic();
+    void updateHeader();
+    void updateProgress();
+    void updateDetails();
+
+    void setTitle(const QString &title)
+    {
+        if (title != m_title) {
+            m_title = title;
+            if (titleChanged) {
+                titleChanged();
+            }
+        }
+    }
+
+    QPointer<KIO::Job> m_job;
+    const bool m_classic;
+    bool m_jobDone = false;
+    bool m_detailsShown = true;
+    QString m_title;
+    QUrl m_from;
+    QUrl m_to;
+    int m_itemCount = 0;
+    bool m_moving = false;
+    bool m_compressing = false;
+
+    QWidget *m_separator = nullptr;
+    QLabel *m_header = nullptr;
+    QLabel *m_percent = nullptr;
+    QLabel *m_timeLine = nullptr;
+    QProgressBar *m_progressBar = nullptr;
+    QToolButton *m_pauseButton = nullptr;
+    QToolButton *m_detailsButton = nullptr;
+    QWidget *m_details = nullptr;
+    SpeedGraph *m_graph = nullptr;
+    QLabel *m_name = nullptr;
+    QLabel *m_fromLabel = nullptr;
+    QLabel *m_toLabel = nullptr;
+    QLabel *m_speed = nullptr;
+    QLabel *m_timeLeft = nullptr;
+    QLabel *m_itemsLeft = nullptr;
+
+    qulonglong m_totalBytes = 0;
+    qulonglong m_processedBytes = 0;
+    qulonglong m_totalFiles = 0;
+    qulonglong m_processedFiles = 0;
+    unsigned long m_bytesPerSecond = 0;
+};
+
+namespace
+{
+// The section of each job, and the dialog of each File Explorer window (null: the one of the
+// file operations service).
+QHash<KJob *, QPointer<CopyProgressItem>> s_items;
+QHash<QWidget *, QPointer<CopyProgressDialog>> s_windows;
+}
+
 void CopyProgressDialog::track(KIO::CopyJob *job, QWidget *window)
+{
+    trackJob(job, window);
+}
+
+void CopyProgressDialog::trackCompression(KIO::Job *job, QWidget *window)
 {
     trackJob(job, window);
 }
@@ -266,29 +412,201 @@ void CopyProgressDialog::trackJob(KIO::Job *job, QWidget *window)
     QPointer<QWidget> parent(window);
     // Without a window (in the file operations service) the dialog is a window of its own.
     const bool ownWindow = !window;
-    QTimer::singleShot(ShowDelay, job, [guard, parent, ownWindow]() {
-        if (guard && (parent || ownWindow)) {
-            auto dialog = new CopyProgressDialog(guard, parent);
-            dialog->show();
-            if (ownWindow && dialog->windowHandle()) {
-                KWindowSystem::activateWindow(dialog->windowHandle());
-            }
+    // A job that is already done (it is deleted a moment later) gets no section.
+    auto done = std::make_shared<bool>(false);
+    QObject::connect(job, &KJob::finished, job, [done]() {
+        *done = true;
+    });
+    QTimer::singleShot(ShowDelay, job, [guard, parent, ownWindow, done]() {
+        if (guard && !*done && (parent || ownWindow)) {
+            dialogFor(parent)->addJob(guard);
         }
     });
 }
 
-CopyProgressDialog::CopyProgressDialog(KIO::Job *job, QWidget *parent)
+CopyProgressDialog *CopyProgressDialog::dialogFor(QWidget *window)
+{
+    QPointer<CopyProgressDialog> &dialog = s_windows[window];
+    if (!dialog || dialog->m_closing) {
+        dialog = new CopyProgressDialog(window);
+    }
+    return dialog;
+}
+
+void CopyProgressDialog::setQuestionShown(KJob *job, bool shown)
+{
+    if (shown) {
+        s_asking.insert(job);
+    } else {
+        s_asking.remove(job);
+    }
+    if (CopyProgressItem *item = s_items.value(job)) {
+        item->setVisible(!shown);
+        if (auto dialog = qobject_cast<CopyProgressDialog *>(item->window())) {
+            dialog->updateWindow();
+        }
+    }
+}
+
+CopyProgressDialog::CopyProgressDialog(QWidget *parent)
     : QDialog(parent)
-    , m_job(job)
+    , m_owner(parent)
     // The Windows 7 look always uses the classic layout.
     , m_classic(GeneralSettings::classicCopyDialog() || shellkitWin7())
 {
     setAttribute(Qt::WA_DeleteOnClose);
     setModal(false);
+    m_detailsShown = copyDialogConfig().readEntry("Details", true);
+
+    m_itemLayout = new QVBoxLayout;
+    m_itemLayout->setContentsMargins(0, 0, 0, 0);
+    m_itemLayout->setSpacing(0);
+
+    auto layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addLayout(m_itemLayout);
+    if (!m_classic) {
+        // Windows 11: one "Fewer details" for all operations; Windows 7 has one per operation.
+        m_detailsButton = detailsButton(this);
+        setDetailsButton(m_detailsButton, m_detailsShown);
+        connect(m_detailsButton, &QToolButton::clicked, this, [this]() {
+            setDetailsShown(!m_detailsShown);
+        });
+        auto footer = new Band(Qt::TopEdge, this);
+        auto footerLayout = new QHBoxLayout(footer);
+        footerLayout->setContentsMargins(14, 8, 14, 8);
+        footerLayout->addWidget(m_detailsButton);
+        footerLayout->addStretch(1);
+        layout->addWidget(footer);
+    }
+    layout->setSizeConstraint(QLayout::SetFixedSize);
+}
+
+void CopyProgressDialog::addJob(KIO::Job *job)
+{
+    auto item = new CopyProgressItem(job, m_classic, this);
+    if (!m_classic) {
+        item->setDetailsShown(m_detailsShown);
+    }
+    // While the job asks the user something, the question stands in for its section.
+    item->setVisible(!s_asking.contains(job));
+    s_items.insert(job, item);
+    connect(item, &QObject::destroyed, this, [job]() {
+        s_items.remove(job);
+    });
+    item->finished = [this](CopyProgressItem *done) {
+        removeItem(done);
+    };
+    item->titleChanged = [this]() {
+        updateWindow();
+    };
+    m_items.append(item);
+    m_itemLayout->addWidget(item);
+    updateWindow();
+}
+
+void CopyProgressDialog::removeItem(CopyProgressItem *item)
+{
+    if (!m_items.removeOne(item)) {
+        return;
+    }
+    m_itemLayout->removeWidget(item);
+    item->hide();
+    item->deleteLater();
+    if (m_items.isEmpty()) {
+        if (!m_closing) {
+            m_closing = true;
+            close();
+        }
+        return;
+    }
+    updateWindow();
+}
+
+void CopyProgressDialog::updateWindow()
+{
+    if (m_closing) {
+        return;
+    }
+    QList<CopyProgressItem *> shown;
+    for (CopyProgressItem *item : std::as_const(m_items)) {
+        if (!item->isHidden()) {
+            shown.append(item);
+        }
+    }
+    for (CopyProgressItem *item : std::as_const(shown)) {
+        item->setSeparatorShown(item != shown.first());
+    }
+    if (shown.isEmpty()) {
+        hide();
+        return;
+    }
+    if (shown.count() == 1) {
+        setWindowTitle(shown.first()->title());
+    } else {
+        setWindowTitle(i18ndcp(shellkitDomain, "@title:window", "%1 operation running", "%1 operations running", shown.count()));
+    }
+    if (!isVisible()) {
+        showWindow();
+    }
+}
+
+void CopyProgressDialog::setDetailsShown(bool shown)
+{
+    m_detailsShown = shown;
+    copyDialogConfig().writeEntry("Details", shown);
+    if (m_detailsButton) {
+        setDetailsButton(m_detailsButton, shown);
+    }
+    for (CopyProgressItem *item : std::as_const(m_items)) {
+        item->setDetailsShown(shown);
+    }
+}
+
+void CopyProgressDialog::closeEvent(QCloseEvent *event)
+{
+    m_closing = true;
+    // Copy the list: each killed job removes its section.
+    const QList<CopyProgressItem *> items = m_items;
+    for (CopyProgressItem *item : items) {
+        if (item->isRunning()) {
+            item->job()->kill(KJob::EmitResult);
+        }
+    }
+    // Not QDialog::closeEvent: it calls reject(), which closes again, and the nested close
+    // leaves the event ignored and an empty window behind.
+    event->accept();
+}
+
+void CopyProgressDialog::reject()
+{
+    close();
+}
+
+void CopyProgressDialog::showWindow()
+{
+    show();
+    if (!m_owner && windowHandle()) {
+        KWindowSystem::activateWindow(windowHandle());
+    }
+}
+
+CopyProgressItem::CopyProgressItem(KIO::Job *job, bool classic, QWidget *parent)
+    : QWidget(parent)
+    , m_job(job)
+    , m_classic(classic)
+{
+    m_separator = new SeparatorLine(this);
+
 
     const auto copyJob = qobject_cast<KIO::CopyJob *>(job);
     const auto deleteJob = qobject_cast<KIO::DeleteJob *>(job);
-    const QList<QUrl> sources = copyJob ? copyJob->srcUrls() : deleteJob ? deleteJob->urls() : QList<QUrl>();
+    const auto compressJob = qobject_cast<CompressJob *>(job);
+    const QList<QUrl> sources = copyJob ? copyJob->srcUrls()
+        : deleteJob                     ? deleteJob->urls()
+        : compressJob                   ? compressJob->sources()
+                                        : QList<QUrl>();
     m_itemCount = sources.count();
     if (!sources.isEmpty()) {
         m_from = sources.first().adjusted(QUrl::StripTrailingSlash | QUrl::RemoveFilename);
@@ -296,6 +614,10 @@ CopyProgressDialog::CopyProgressDialog(KIO::Job *job, QWidget *parent)
     if (copyJob && copyJob->destUrl().scheme() != QLatin1String("trash")) {
         m_to = copyJob->destUrl();
         m_moving = copyJob->operationMode() == KIO::CopyJob::Move;
+    }
+    if (compressJob) {
+        m_to = compressJob->archive();
+        m_compressing = true;
     }
 
     m_header = new QLabel(this);
@@ -309,19 +631,20 @@ CopyProgressDialog::CopyProgressDialog(KIO::Job *job, QWidget *parent)
     m_progressBar->setRange(0, 100);
     m_progressBar->setTextVisible(false);
 
-    m_detailsButton = new QToolButton(this);
-    m_detailsButton->setAutoRaise(true);
-    m_detailsButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_detailsButton = detailsButton(this);
     connect(m_detailsButton, &QToolButton::clicked, this, [this]() {
-        const bool shown = !m_details->isVisible();
+        const bool shown = !m_detailsShown;
         setDetailsShown(shown);
-        KConfigGroup group(KSharedConfig::openConfig(QStringLiteral("shellkit-filesrc")), QStringLiteral("CopyDialog"));
-        group.writeEntry("Details", shown);
+        copyDialogConfig().writeEntry("Details", shown);
     });
 
     m_details = new QWidget(this);
     m_name = new QLabel(m_details);
     m_name->setTextFormat(Qt::PlainText);
+    // The dialog opens after a moment, often after the job announced its (only) file.
+    if (!sources.isEmpty()) {
+        m_name->setText(sources.first().fileName());
+    }
     m_timeLeft = new QLabel(m_details);
     m_itemsLeft = new QLabel(m_details);
 
@@ -331,7 +654,7 @@ CopyProgressDialog::CopyProgressDialog(KIO::Job *job, QWidget *parent)
         setupModern();
     }
 
-    connect(job, &KJob::percentChanged, this, &CopyProgressDialog::updateProgress);
+    connect(job, &KJob::percentChanged, this, &CopyProgressItem::updateProgress);
     connect(job, &KJob::totalAmountChanged, this, [this](KJob *, KJob::Unit unit, qulonglong amount) {
         if (unit == KJob::Bytes) {
             m_totalBytes = amount;
@@ -363,10 +686,17 @@ CopyProgressDialog::CopyProgressDialog(KIO::Job *job, QWidget *parent)
         connect(copyJob, &KIO::CopyJob::moving, this, current);
     } else if (deleteJob) {
         connect(deleteJob, &KIO::DeleteJob::deleting, this, current);
+    } else if (compressJob) {
+        connect(compressJob, &CompressJob::compressing, this, current);
     }
-    connect(job, &KJob::suspended, this, &CopyProgressDialog::updateProgress);
-    connect(job, &KJob::resumed, this, &CopyProgressDialog::updateProgress);
-    connect(job, &KJob::finished, this, &QDialog::close);
+    connect(job, &KJob::suspended, this, &CopyProgressItem::updateProgress);
+    connect(job, &KJob::resumed, this, &CopyProgressItem::updateProgress);
+    connect(job, &KJob::finished, this, [this]() {
+        m_jobDone = true;
+        if (finished) {
+            finished(this);
+        }
+    });
 
     m_totalBytes = job->totalAmount(KJob::Bytes);
     m_processedBytes = job->processedAmount(KJob::Bytes);
@@ -376,13 +706,14 @@ CopyProgressDialog::CopyProgressDialog(KIO::Job *job, QWidget *parent)
     updateProgress();
     updateDetails();
     // Windows remembers whether the details were open last time.
-    setDetailsShown(KConfigGroup(KSharedConfig::openConfig(QStringLiteral("shellkit-filesrc")), QStringLiteral("CopyDialog")).readEntry("Details", true));
+    setDetailsShown(copyDialogConfig().readEntry("Details", true));
 }
 
-void CopyProgressDialog::setupModern()
+
+void CopyProgressItem::setupModern()
 {
     // Windows 11: the header, "45% complete" with pause and cancel beside it, the speed graph
-    // (or a thin bar when the details are hidden), the details as plain lines and a footer.
+    // (or a thin bar when the details are hidden) and the details as plain lines.
     m_header->setFixedWidth(ContentWidth);
 
     m_percent = new QLabel(this);
@@ -442,17 +773,15 @@ void CopyProgressDialog::setupModern()
     content->addWidget(m_progressBar);
     content->addWidget(m_details);
 
-    auto footer = new Band(Qt::TopEdge, this);
-    auto footerLayout = new QHBoxLayout(footer);
-    footerLayout->setContentsMargins(14, 8, 14, 8);
-    footerLayout->addWidget(m_detailsButton);
-    footerLayout->addStretch(1);
+    // The window has one "Fewer details" button for all its sections.
+    delete m_detailsButton;
+    m_detailsButton = nullptr;
 
     auto layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+    layout->addWidget(m_separator);
     layout->addLayout(content);
-    layout->addWidget(footer);
     layout->setSizeConstraint(QLayout::SetFixedSize);
 
     connect(m_job, &KJob::suspended, this, [this]() {
@@ -465,7 +794,7 @@ void CopyProgressDialog::setupModern()
     });
 }
 
-void CopyProgressDialog::setupClassic()
+void CopyProgressItem::setupClassic()
 {
     // Windows 7: a banner, the details as a table, a progress bar, and Cancel in the footer.
     auto banner = new Band(Qt::BottomEdge, this);
@@ -536,22 +865,25 @@ void CopyProgressDialog::setupClassic()
     auto layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+    layout->addWidget(m_separator);
     layout->addWidget(banner);
     layout->addLayout(content);
     layout->addWidget(footer);
     layout->setSizeConstraint(QLayout::SetFixedSize);
 }
 
-void CopyProgressDialog::updateHeader()
+void CopyProgressItem::updateHeader()
 {
     const bool deleting = !m_to.isValid();
     // The job may be gone already: it deletes itself when it finishes.
 
-    if (m_classic && m_details->isVisible()) {
+    if (m_classic && m_detailsShown) {
         // "Copying 1 item (4.16 GB)"; the table below names the folders.
         const QString size = shellkitStatusSize(m_totalBytes);
         if (deleting) {
             m_header->setText(i18ndcp(shellkitDomain, "@info %2 is a size", "Deleting %1 item (%2)", "Deleting %1 items (%2)", m_itemCount, size));
+        } else if (m_compressing) {
+            m_header->setText(i18ndcp(shellkitDomain, "@info %2 is a size", "Compressing %1 item (%2)", "Compressing %1 items (%2)", m_itemCount, size));
         } else if (m_moving) {
             m_header->setText(i18ndcp(shellkitDomain, "@info %2 is a size", "Moving %1 item (%2)", "Moving %1 items (%2)", m_itemCount, size));
         } else {
@@ -572,6 +904,8 @@ void CopyProgressDialog::updateHeader()
     const QString from = place(m_from);
     if (deleting) {
         m_header->setText(i18ndcp(shellkitDomain, "@info", "Deleting %1 item from %2", "Deleting %1 items from %2", m_itemCount, from));
+    } else if (m_compressing) {
+        m_header->setText(i18ndcp(shellkitDomain, "@info", "Compressing %1 item from %2 to %3", "Compressing %1 items from %2 to %3", m_itemCount, from, place(m_to)));
     } else if (m_moving) {
         m_header->setText(i18ndcp(shellkitDomain, "@info", "Moving %1 item from %2 to %3", "Moving %1 items from %2 to %3", m_itemCount, from, place(m_to)));
     } else {
@@ -579,7 +913,7 @@ void CopyProgressDialog::updateHeader()
     }
 }
 
-void CopyProgressDialog::updateProgress()
+void CopyProgressItem::updateProgress()
 {
     if (!m_job) {
         return;
@@ -596,11 +930,11 @@ void CopyProgressDialog::updateProgress()
     }
     // Windows 7 names the time left in the title once it is known.
     if (!m_classic || m_bytesPerSecond == 0) {
-        setWindowTitle(text);
+        setTitle(text);
     }
 }
 
-void CopyProgressDialog::updateDetails()
+void CopyProgressItem::updateDetails()
 {
     const KFormat format;
     const QString speed = i18ndc(shellkitDomain, "@info Transfer speed", "%1/s", shellkitStatusSize(m_bytesPerSecond));
@@ -618,7 +952,7 @@ void CopyProgressDialog::updateDetails()
         if (m_classic) {
             const QString remaining = i18ndc(shellkitDomain, "@info %1 is a duration", "%1 remaining", duration);
             m_timeLine->setText(m_timeLeft->text());
-            setWindowTitle(remaining);
+            setTitle(remaining);
         }
     } else {
         m_timeLeft->setText(i18ndc(shellkitDomain, "@info Time remaining", "Calculating..."));
@@ -627,18 +961,23 @@ void CopyProgressDialog::updateDetails()
         }
     }
 
-    const qulonglong filesLeft = m_totalFiles > m_processedFiles ? m_totalFiles - m_processedFiles : 0;
+    qulonglong filesLeft = m_totalFiles > m_processedFiles ? m_totalFiles - m_processedFiles : 0;
     const qulonglong bytesLeft = m_totalBytes > m_processedBytes ? m_totalBytes - m_processedBytes : 0;
+    // The file being copied still counts, as in Windows ("1 (650 MB)").
+    if (filesLeft == 0 && bytesLeft > 0) {
+        filesLeft = 1;
+    }
     m_itemsLeft->setText(
         i18ndc(shellkitDomain, "@info %1 is a number of files, %2 their size", "%1 (%2)", QLocale().toString(filesLeft), shellkitStatusSize(bytesLeft)));
 
-    if (m_classic && m_details->isVisible()) {
+    if (m_classic && m_detailsShown) {
         updateHeader();
     }
 }
 
-void CopyProgressDialog::setDetailsShown(bool shown)
+void CopyProgressItem::setDetailsShown(bool shown)
 {
+    m_detailsShown = shown;
     m_details->setVisible(shown);
     if (m_graph) {
         // The graph shows the progress, so the bar only stands in for it when collapsed.
@@ -647,8 +986,9 @@ void CopyProgressDialog::setDetailsShown(bool shown)
     if (m_timeLine) {
         m_timeLine->setVisible(!shown);
     }
-    m_detailsButton->setIcon(glyphIcon(shown ? Glyph::ChevronUp : Glyph::ChevronDown, palette()));
-    m_detailsButton->setText(shown ? i18ndc(shellkitDomain, "@action:button", "Fewer details") : i18ndc(shellkitDomain, "@action:button", "More details"));
+    if (m_detailsButton) {
+        setDetailsButton(m_detailsButton, shown);
+    }
     updateHeader();
 }
 

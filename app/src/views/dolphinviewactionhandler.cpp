@@ -6,6 +6,7 @@
  */
 
 #include "dolphinviewactionhandler.h"
+#include "jobs/propertiesdialog.h"
 #include "shellkit.h"
 
 #include "kitemviews/kfileitemlisttostring.h"
@@ -907,19 +908,13 @@ void DolphinViewActionHandler::slotDuplicate()
 
 void DolphinViewActionHandler::slotProperties()
 {
-    KPropertiesDialog *dialog = nullptr;
+    // shellkit fork: the Windows Properties dialog.
     const KFileItemList list = m_currentView->selectedItems();
     if (list.isEmpty()) {
-        const QUrl url = m_currentView->url();
-        dialog = new KPropertiesDialog(url, m_currentView);
+        PropertiesDialog::showProperties(QList<QUrl>{m_currentView->url()}, m_currentView);
     } else {
-        dialog = new KPropertiesDialog(list, m_currentView);
+        PropertiesDialog::showProperties(list, m_currentView);
     }
-
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->show();
-    dialog->raise();
-    dialog->activateWindow();
 }
 
 void DolphinViewActionHandler::slotCopyPath()

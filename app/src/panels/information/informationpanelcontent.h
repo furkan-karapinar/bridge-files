@@ -22,6 +22,7 @@ class QPixmap;
 class QDialogButtonBox;
 class QString;
 class QLabel;
+class QPlainTextEdit;
 class QScrollArea;
 class QGestureEvent;
 
@@ -84,6 +85,12 @@ public:
      */
     void setPreviewAutoPlay(bool autoPlay);
 
+    /**
+     * shellkit fork: the Windows preview pane, only a large preview of the selected file
+     * (or a message when there is nothing to preview) instead of the details.
+     */
+    void setPreviewMode(bool previewMode);
+
 Q_SIGNALS:
     void urlActivated(const QUrl &url);
     void configurationFinished();
@@ -135,6 +142,15 @@ private:
     /** shellkit fork: shows either the hint card or the metadata below the name. */
     void setHintVisible(bool visible);
 
+    /** shellkit fork: in preview mode shows \p message, or the preview when it is empty. */
+    void updatePreviewPane(const QString &message);
+
+    /** shellkit fork: the preview is always shown in preview mode. */
+    bool previewShown() const;
+
+    /** shellkit fork: in preview mode text files show their text, as in Windows. */
+    bool showTextPreview();
+
     /**
      * Adjusts the sizes of the widgets dependent on the available
      * width given by \p width.
@@ -163,6 +179,10 @@ private:
     QDialogButtonBox *m_configureButtons;
     QWidget *m_previewBand;
     QWidget *m_hintCard;
+    QWidget *m_details;
+    QLabel *m_previewMessage;
+    QPlainTextEdit *m_textPreview;
+    bool m_previewMode = false;
 
     bool m_isVideo;
     QUrl m_disabledPreviewUrl;

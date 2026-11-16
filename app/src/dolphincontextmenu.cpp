@@ -14,6 +14,8 @@
 #include "dolphinremoveaction.h"
 #include "dolphinviewcontainer.h"
 #include "global.h"
+#include "jobs/compressedfolders.h"
+#include "shellkit.h"
 #include "settings/dolphinsettingsdialog.h"
 #include "trash/dolphintrash.h"
 #include "views/dolphinview.h"
@@ -34,6 +36,9 @@
 #include <QClipboard>
 #include <QKeyEvent>
 #include <QAction>
+#include <QPointer>
+
+#include <algorithm>
 
 DolphinContextMenu::DolphinContextMenu(DolphinMainWindow *parent,
                                        const KFileItem &fileInfo,
@@ -310,6 +315,31 @@ void DolphinContextMenu::addItemContextMenu()
     }
 
     insertDefaultItemActions(selectedItemsProps);
+
+    // shellkit fork: compressed (zipped) folders as in Windows.
+    if (m_selectedItems.count() == 1 && CompressedFolders::canExtract(m_fileInfo)) {
+        addAction(QIcon::fromTheme(QStringLiteral("archive-extract")),
+                  i18ndc(shellkitDomain, "@action:inmenu", "Extract All..."),
+                  this,
+                  [item = m_fileInfo, window = QPointer<DolphinMainWindow>(m_mainWindow)]() {
+                      if (window) {
+                          window->extractAll(item);
+                      }
+                  });
+    }
+    const bool allLocal = std::all_of(m_selectedItems.cbegin(), m_selectedItems.cend(), [](const KFileItem &item) {
+        return item.url().isLocalFile();
+    });
+    if (allLocal) {
+        addAction(QIcon::fromTheme(QStringLiteral("archive-insert")),
+                  i18ndc(shellkitDomain, "@action:inmenu", "Compress to ZIP file"),
+                  this,
+                  [items = m_selectedItems, window = QPointer<DolphinMainWindow>(m_mainWindow)]() {
+                      if (window) {
+                          window->compressToZip(items);
+                      }
+                  });
+    }
 
     addAdditionalActions(selectedItemsProps);
 

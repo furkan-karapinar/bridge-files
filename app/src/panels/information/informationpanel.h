@@ -34,6 +34,10 @@ public:
      */
     void readSettings() override;
 
+    /** shellkit fork: switches between the Windows details pane and preview pane. */
+    void setPreviewMode(bool previewMode);
+    bool previewMode() const;
+
 Q_SIGNALS:
     void urlActivated(const QUrl &url);
 
@@ -152,6 +156,7 @@ private:
     KIO::Job *m_folderStatJob;
 
     InformationPanelContent *m_content;
+    bool m_previewMode = false;
     bool m_inConfigurationMode = false;
 };
 

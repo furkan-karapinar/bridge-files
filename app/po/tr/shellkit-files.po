@@ -576,3 +576,483 @@ msgstr "Reddet"
 msgctxt "@info"
 msgid "The user did not allow this file operation."
 msgstr "Kullanıcı bu dosya işlemine izin vermedi."
+
+msgctxt "@option:check"
+msgid "Do this for all conflicts"
+msgstr "Bunu tüm çakışmalar için yap"
+
+msgctxt "@info %1 is a size"
+msgid "Size: %1"
+msgstr "Boyut: %1"
+
+msgctxt "@info %1 is a date and time"
+msgid "Date modified: %1"
+msgstr "Değiştirme tarihi: %1"
+
+msgctxt "@title:window"
+msgid "Replace or Skip Files"
+msgstr "Dosyaları Değiştir veya Atla"
+
+msgctxt "@info"
+msgid "The destination already has a file named \"%1\""
+msgstr "Hedefte \"%1\" adlı bir dosya zaten var"
+
+msgctxt "@action:button"
+msgid "Replace the file in the destination"
+msgstr "Hedefteki dosyayı değiştir"
+
+msgctxt "@action:button"
+msgid "Skip this file"
+msgstr "Bu dosyayı atla"
+
+msgctxt "@action:button"
+msgid "Compare info for both files"
+msgstr "Her iki dosyanın bilgilerini karşılaştır"
+
+msgctxt "@title"
+msgid "%1 file conflict"
+msgid_plural "%1 file conflicts"
+msgstr[0] "%1 Dosya Çakışması"
+msgstr[1] "%1 Dosya Çakışması"
+
+msgctxt "@info"
+msgid "Which files do you want to keep?"
+msgstr "Hangi dosyaları tutmak istiyorsunuz?"
+
+msgctxt "@info"
+msgid "If you select both versions, the copied file will have a number added to its name."
+msgstr "İki sürümü de seçerseniz kopyalanan dosyanın adına bir sayı eklenir."
+
+msgctxt "@option:check %1 is a folder"
+msgid "Files from %1"
+msgstr "%1 konumundaki dosyalar"
+
+msgctxt "@option:check %1 is a folder"
+msgid "Files already in %1"
+msgstr "%1 konumunda zaten olan dosyalar"
+
+msgctxt "@action:button"
+msgid "Continue"
+msgstr "Devam"
+
+msgctxt "@title:window"
+msgid "Move File"
+msgstr "Dosya Taşı"
+
+msgctxt "@title:window"
+msgid "Copy File"
+msgstr "Dosya Kopyala"
+
+msgctxt "@info"
+msgid "There is already a file with the same name in this location."
+msgstr "Bu konumda aynı ada sahip bir dosya zaten var."
+
+msgctxt "@info"
+msgid "Click the file you want to keep"
+msgstr "Tutmak istediğiniz dosyayı tıklatın"
+
+msgctxt "@action:button"
+msgid "Move and Replace"
+msgstr "Taşı ve Değiştir"
+
+msgctxt "@action:button"
+msgid "Copy and Replace"
+msgstr "Kopyala ve Değiştir"
+
+msgctxt "@info"
+msgid "Replace the file in the destination folder with the file you are moving:"
+msgstr "Hedef klasördeki dosyayı taşıdığınız dosyayla değiştirin:"
+
+msgctxt "@info"
+msgid "Replace the file in the destination folder with the file you are copying:"
+msgstr "Hedef klasördeki dosyayı kopyaladığınız dosyayla değiştirin:"
+
+msgctxt "@action:button"
+msgid "Don't move"
+msgstr "Taşıma"
+
+msgctxt "@action:button"
+msgid "Don't copy"
+msgstr "Kopyalama"
+
+msgctxt "@info"
+msgid "No files will be changed. Leave this file in the destination folder:"
+msgstr "Hiçbir dosya değiştirilmeyecek. Bu dosyayı hedef klasörde bırakın:"
+
+msgctxt "@action:button"
+msgid "Move, but keep both files"
+msgstr "Taşı, ancak iki dosyayı da sakla"
+
+msgctxt "@action:button"
+msgid "Copy, but keep both files"
+msgstr "Kopyala, ancak iki dosyayı da sakla"
+
+msgctxt "@info"
+msgid "The file you are moving will be renamed \"%1\""
+msgstr "Taşıdığınız dosya \"%1\" olarak yeniden adlandırılacak"
+
+msgctxt "@info"
+msgid "The file you are copying will be renamed \"%1\""
+msgstr "Kopyaladığınız dosya \"%1\" olarak yeniden adlandırılacak"
+
+msgctxt "@title:window"
+msgid "%1 operation running"
+msgid_plural "%1 operations running"
+msgstr[0] "%1 işlem çalışıyor"
+msgstr[1] "%1 işlem çalışıyor"
+
+msgctxt "@title:window %1 is a file name"
+msgid "%1 Properties"
+msgstr "%1 Özellikleri"
+
+msgctxt "@title:window %1 is the first of several file names"
+msgid "%1, ... Properties"
+msgstr "%1, ... Özellikleri"
+
+msgctxt "@title:tab"
+msgid "General"
+msgstr "Genel"
+
+msgctxt "@title:tab"
+msgid "Security"
+msgstr "Güvenlik"
+
+msgctxt "@action:button"
+msgid "Change..."
+msgstr "Değiştir..."
+
+msgctxt "@action:button"
+msgid "Edit..."
+msgstr "Düzenle..."
+
+msgctxt "@info %1 is a date, %2 a time"
+msgid "%1, %2"
+msgstr "%1, %2"
+
+msgctxt "@info %1 is a file type"
+msgid "All of type %1"
+msgstr "Tümü %1 türünde"
+
+msgctxt "@info %1 is a file type, %2 its extension"
+msgid "%1 (.%2)"
+msgstr "%1 (.%2)"
+
+msgctxt "@info %1 is a folder"
+msgid "All in %1"
+msgstr "Tümü %1 içinde"
+
+msgctxt "@info %1 is a size such as 1.46 KB, %2 the exact number of bytes"
+msgid "%1 (%2 bytes)"
+msgstr "%1 (%2 bayt)"
+
+msgctxt "@info Location of files in several folders"
+msgid "Various folders"
+msgstr "Çeşitli klasörler"
+
+msgctxt "@info No program opens this file type"
+msgid "Pick an app"
+msgstr "Uygulama seçin"
+
+msgctxt "@info Type of several files"
+msgid "Multiple types"
+msgstr "Birden çok tür"
+
+msgctxt "@info"
+msgid "%1 Files, %2 Folders"
+msgstr "%1 Dosya, %2 Klasör"
+
+msgctxt "@info"
+msgid "To change permissions, click Edit."
+msgstr "İzinleri değiştirmek için Düzenle'ye tıklayın."
+
+msgctxt "@item %1 is a group name"
+msgid "%1 (Group)"
+msgstr "%1 (Grup)"
+
+msgctxt "@item %1 is a user name"
+msgid "%1 (Owner)"
+msgstr "%1 (Sahip)"
+
+msgctxt "@item All other users"
+msgid "Everyone"
+msgstr "Herkes"
+
+msgctxt "@item Permission of a file"
+msgid "Run as a program"
+msgstr "Program olarak çalıştır"
+
+msgctxt "@item Permission of a folder"
+msgid "Open folder"
+msgstr "Klasörü aç"
+
+msgctxt "@item Permission"
+msgid "Read"
+msgstr "Okuma"
+
+msgctxt "@item Permission"
+msgid "Write"
+msgstr "Yazma"
+
+msgctxt "@label %1 is a path"
+msgid "Object name:  %1"
+msgstr "Nesne adı:  %1"
+
+msgctxt "@label %1 is a user or group"
+msgid "Permissions for %1"
+msgstr "%1 için izinler"
+
+msgctxt "@label"
+msgid "Accessed:"
+msgstr "Erişim:"
+
+msgctxt "@label"
+msgid "Attributes:"
+msgstr "Öznitelikler:"
+
+msgctxt "@label"
+msgid "Contains:"
+msgstr "İçerik:"
+
+msgctxt "@label"
+msgid "Created:"
+msgstr "Oluşturulma:"
+
+msgctxt "@label"
+msgid "Group or user names:"
+msgstr "Grup veya kullanıcı adları:"
+
+msgctxt "@label"
+msgid "Location:"
+msgstr "Konum:"
+
+msgctxt "@label"
+msgid "Modified:"
+msgstr "Değiştirilme:"
+
+msgctxt "@label"
+msgid "Opens with:"
+msgstr "Birlikte açılan:"
+
+msgctxt "@label"
+msgid "Size on disk:"
+msgstr "Diskteki boyut:"
+
+msgctxt "@label"
+msgid "Type of file:"
+msgstr "Dosya türü:"
+
+msgctxt "@label"
+msgid "Type:"
+msgstr "Tür:"
+
+msgctxt "@option:check File attribute"
+msgid "Hidden"
+msgstr "Gizli"
+
+msgctxt "@option:check File attribute"
+msgid "Read-only"
+msgstr "Salt okunur"
+
+msgctxt "@title:column"
+msgid "Allow"
+msgstr "İzin ver"
+
+msgctxt "@title:column"
+msgid "Permissions"
+msgstr "İzinler"
+
+msgctxt "@action:inmenu"
+msgid "Extract All..."
+msgstr "Tümünü ayıkla..."
+
+msgctxt "@title:window"
+msgid "Extract Compressed (Zipped) Folders"
+msgstr "Sıkıştırılmış (Zip) Klasörleri Ayıkla"
+
+msgctxt "@title"
+msgid "Select a Destination and Extract Files"
+msgstr "Bir Hedef Seçin ve Dosyaları Ayıklayın"
+
+msgctxt "@label:textbox"
+msgid "Files will be extracted to this folder:"
+msgstr "Dosyalar bu klasöre ayıklanacak:"
+
+msgctxt "@action:button"
+msgid "Browse..."
+msgstr "Gözat..."
+
+msgctxt "@title:window"
+msgid "Select a destination"
+msgstr "Bir hedef seçin"
+
+msgctxt "@option:check"
+msgid "Show extracted files when complete"
+msgstr "Tamamlandığında ayıklanan dosyaları göster"
+
+msgctxt "@action:button"
+msgid "Extract"
+msgstr "Ayıkla"
+
+msgctxt "@info %2 is a size"
+msgid "Compressing %1 item (%2)"
+msgid_plural "Compressing %1 items (%2)"
+msgstr[0] "%1 öğe sıkıştırılıyor (%2)"
+msgstr[1] "%1 öğe sıkıştırılıyor (%2)"
+
+msgctxt "@info"
+msgid "Compressing %1 item from %2 to %3"
+msgid_plural "Compressing %1 items from %2 to %3"
+msgstr[0] "%1 öğe %2 kaynağından %3 hedefine sıkıştırılıyor"
+msgstr[1] "%1 öğe %2 kaynağından %3 hedefine sıkıştırılıyor"
+
+msgctxt "@item:inmenu"
+msgid "Recycle Bin"
+msgstr "Geri Dönüşüm Kutusu"
+
+msgctxt "@action:intoolbar"
+msgid "Search options"
+msgstr "Arama seçenekleri"
+
+msgctxt "@action:intoolbar"
+msgid "Close search"
+msgstr "Aramayı kapat"
+
+msgctxt "@title:menu"
+msgid "Date modified"
+msgstr "Değiştirme tarihi"
+
+msgctxt "@item:inmenu Date modified"
+msgid "Today"
+msgstr "Bugün"
+
+msgctxt "@item:inmenu Date modified"
+msgid "Yesterday"
+msgstr "Dün"
+
+msgctxt "@item:inmenu Date modified"
+msgid "This week"
+msgstr "Bu hafta"
+
+msgctxt "@item:inmenu Date modified"
+msgid "Last week"
+msgstr "Geçen hafta"
+
+msgctxt "@item:inmenu Date modified"
+msgid "This month"
+msgstr "Bu ay"
+
+msgctxt "@item:inmenu Date modified"
+msgid "Last month"
+msgstr "Geçen ay"
+
+msgctxt "@item:inmenu Date modified"
+msgid "This year"
+msgstr "Bu yıl"
+
+msgctxt "@item:inmenu Date modified"
+msgid "Last year"
+msgstr "Geçen yıl"
+
+msgctxt "@title:menu File kind"
+msgid "Kind"
+msgstr "Tür"
+
+msgctxt "@item:inmenu File kind"
+msgid "Calendar"
+msgstr "Takvim"
+
+msgctxt "@item:inmenu File kind"
+msgid "Contact"
+msgstr "Kişi"
+
+msgctxt "@item:inmenu File kind"
+msgid "Document"
+msgstr "Belge"
+
+msgctxt "@item:inmenu File kind"
+msgid "Email"
+msgstr "E-posta"
+
+msgctxt "@item:inmenu File kind"
+msgid "Folder"
+msgstr "Klasör"
+
+msgctxt "@item:inmenu File kind"
+msgid "Link"
+msgstr "Bağlantı"
+
+msgctxt "@item:inmenu File kind"
+msgid "Music"
+msgstr "Müzik"
+
+msgctxt "@item:inmenu File kind"
+msgid "Picture"
+msgstr "Resim"
+
+msgctxt "@item:inmenu File kind"
+msgid "Playlist"
+msgstr "Çalma listesi"
+
+msgctxt "@item:inmenu File kind"
+msgid "Program"
+msgstr "Program"
+
+msgctxt "@item:inmenu File kind"
+msgid "Video"
+msgstr "Video"
+
+msgctxt "@title:menu File size"
+msgid "Size"
+msgstr "Boyut"
+
+msgctxt "@item:inmenu File size"
+msgid "Empty (0 KB)"
+msgstr "Boş (0 KB)"
+
+msgctxt "@item:inmenu File size"
+msgid "Tiny (0 - 16 KB)"
+msgstr "Çok küçük (0 - 16 KB)"
+
+msgctxt "@item:inmenu File size"
+msgid "Small (16 KB - 1 MB)"
+msgstr "Küçük (16 KB - 1 MB)"
+
+msgctxt "@item:inmenu File size"
+msgid "Medium (1 - 128 MB)"
+msgstr "Orta (1 - 128 MB)"
+
+msgctxt "@item:inmenu File size"
+msgid "Large (128 MB - 1 GB)"
+msgstr "Büyük (128 MB - 1 GB)"
+
+msgctxt "@item:inmenu File size"
+msgid "Huge (1 - 4 GB)"
+msgstr "Çok büyük (1 - 4 GB)"
+
+msgctxt "@item:inmenu File size"
+msgid "Gigantic (> 4 GB)"
+msgstr "Devasa (> 4 GB)"
+
+msgctxt "@title:menu"
+msgid "Advanced options"
+msgstr "Gelişmiş seçenekler"
+
+msgctxt "@item:inmenu Search option"
+msgid "File contents"
+msgstr "Dosya içerikleri"
+
+msgctxt "@info Preview pane"
+msgid "No preview available."
+msgstr "Önizleme yok."
+
+msgctxt "@info Preview pane"
+msgid "Select a file to preview."
+msgstr "Önizlemek istediğiniz dosyayı seçin."
+
+msgctxt "@title:menu Which panes and items the window shows"
+msgid "Show"
+msgstr "Göster"
+
+msgctxt "@action"
+msgid "Show the address bar list"
+msgstr "Adres çubuğu listesini göster"

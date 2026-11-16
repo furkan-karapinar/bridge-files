@@ -1038,6 +1038,20 @@ void KFileItemModel::setMimeTypeFilters(const QStringList &filters)
     }
 }
 
+void KFileItemModel::setSearchOptions(const KFileItemModelFilter::SearchOptions &options)
+{
+    if (!(m_filter.searchOptions() == options)) {
+        dispatchPendingItemsToInsert();
+        m_filter.setSearchOptions(options);
+        applyFilters();
+    }
+}
+
+KFileItemModelFilter::SearchOptions KFileItemModel::searchOptions() const
+{
+    return m_filter.searchOptions();
+}
+
 QStringList KFileItemModel::mimeTypeFilters() const
 {
     return m_filter.mimeTypes();

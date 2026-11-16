@@ -318,6 +318,12 @@ void MediaWidget::initPlayer()
         connect(m_player, &QMediaPlayer::playbackStateChanged, this, &MediaWidget::onStateChanged);
         connect(m_player, &QMediaPlayer::positionChanged, this, &MediaWidget::onPositionChanged);
         connect(m_player, &QMediaPlayer::durationChanged, this, &MediaWidget::onDurationChanged);
+        // shellkit fork: show the thumbnail again when the video ends instead of a black widget.
+        connect(m_player, &QMediaPlayer::mediaStatusChanged, this, [this](QMediaPlayer::MediaStatus status) {
+            if (status == QMediaPlayer::EndOfMedia) {
+                finished();
+            }
+        });
     }
 
     if (m_url != m_player->source()) {

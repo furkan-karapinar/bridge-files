@@ -25,6 +25,9 @@
 #include <QDialogButtonBox>
 #include <QGesture>
 #include <QLabel>
+#include <QMimeType>
+#include <QFile>
+#include <QPlainTextEdit>
 #include <QPainter>
 #include <QScrollArea>
 #include <QScroller>
@@ -147,11 +150,20 @@ InformationPanelContent::InformationPanelContent(QWidget *parent)
     m_previewBand = new PreviewBand(this);
     QVBoxLayout *bandLayout = new QVBoxLayout(m_previewBand);
     bandLayout->setContentsMargins(PreviewBandMargin, PreviewBandMargin, PreviewBandMargin, PreviewBandMargin);
-    QVBoxLayout *layout = new QVBoxLayout();
+    m_details = new QWidget(this);
+    QVBoxLayout *layout = new QVBoxLayout(m_details);
     layout->setContentsMargins(20, 16, 20, 12);
     layout->setSpacing(12);
     outerLayout->addWidget(m_previewBand);
-    outerLayout->addLayout(layout, 1);
+    outerLayout->addWidget(m_details, 1);
+
+    // shellkit fork: the message of the preview pane, centred in the whole pane.
+    m_previewMessage = new QLabel(this);
+    m_previewMessage->setAlignment(Qt::AlignCenter);
+    m_previewMessage->setWordWrap(true);
+    m_previewMessage->setContentsMargins(20, 20, 20, 20);
+    m_previewMessage->hide();
+    outerLayout->addWidget(m_previewMessage, 1);
 
     // preview
     const int minPreviewWidth = KIconLoader::SizeEnormous + KIconLoader::SizeMedium;
@@ -193,6 +205,24 @@ InformationPanelContent::InformationPanelContent(QWidget *parent)
     m_metaDataWidget = new Baloo::FileMetaDataWidget(parent);
     m_metaDataWidget->setDateFormat(static_cast<Baloo::DateFormats>(InformationPanelSettings::dateFormat()));
     connect(m_metaDataWidget, &Baloo::FileMetaDataWidget::urlActivated, this, &InformationPanelContent::urlActivated);
+    // shellkit fork: the type as in the Type column ("File folder", "PNG File"), not the MIME comment.
+    connect(m_metaDataWidget, &Baloo::FileMetaDataWidget::metaDataRequestFinished, this, [this](const KFileItemList &items) {
+        if (items.count() != 1) {
+            return;
+        }
+        const KFileItem &item = items.first();
+        const QString comment = item.mimeComment();
+        const QString type = shellkitTypeName(item);
+        if (comment.isEmpty() || comment == type) {
+            return;
+        }
+        const QList<QLabel *> labels = m_metaDataWidget->findChildren<QLabel *>();
+        for (QLabel *label : labels) {
+            if (label->text() == comment) {
+                label->setText(type);
+            }
+        }
+    });
     m_metaDataWidget->setFont(QFontDatabase::systemFont(QFontDatabase::SmallestReadableFont));
     m_metaDataWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 
@@ -229,6 +259,12 @@ InformationPanelContent::InformationPanelContent(QWidget *parent)
     m_hintCard->hide();
 
     bandLayout->addWidget(m_preview);
+    m_textPreview = new QPlainTextEdit(m_previewBand);
+    m_textPreview->setReadOnly(true);
+    m_textPreview->setFrameShape(QFrame::NoFrame);
+    m_textPreview->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+    m_textPreview->hide();
+    bandLayout->addWidget(m_textPreview);
     bandLayout->addWidget(m_mediaWidget);
     layout->addWidget(m_nameLabel);
     layout->addWidget(m_hintCard);
@@ -256,6 +292,8 @@ void InformationPanelContent::showItem(const KFileItem &item)
 
     setHintVisible(false);
     refreshPreview();
+    // Windows previews files only.
+    updatePreviewPane(item.isDir() ? i18ndc(shellkitDomain, "@info Preview pane", "No preview available.") : QString());
 }
 
 void InformationPanelContent::showFolder(const KFileItem &item)
@@ -267,12 +305,76 @@ void InformationPanelContent::showFolder(const KFileItem &item)
         setNameLabelText(i18ndcp(shellkitDomain, "@label %2 is a folder name", "%2 (%1 item)", "%2 (%1 items)", count, item.text()));
     }
     setHintVisible(true);
+    updatePreviewPane(i18ndc(shellkitDomain, "@info Preview pane", "Select a file to preview."));
 }
 
 void InformationPanelContent::setHintVisible(bool visible)
 {
     m_hintCard->setVisible(visible);
     m_metaDataArea->setVisible(!visible);
+}
+
+bool InformationPanelContent::previewShown() const
+{
+    return m_previewMode || InformationPanelSettings::previewsShown();
+}
+
+bool InformationPanelContent::showTextPreview()
+{
+    m_textPreview->hide();
+    if (!m_previewMode || m_item.isNull() || m_item.isDir() || !m_item.isLocalFile()) {
+        return false;
+    }
+    if (!m_item.currentMimeType().inherits(QStringLiteral("text/plain"))) {
+        return false;
+    }
+    QFile file(m_item.localPath());
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    // The beginning of the file is enough for a preview.
+    m_textPreview->setPlainText(QString::fromUtf8(file.read(256 * 1024)));
+    if (m_previewJob) {
+        m_previewJob->kill();
+    }
+    m_preview->hide();
+    m_textPreview->show();
+    return true;
+}
+
+void InformationPanelContent::setPreviewMode(bool previewMode)
+{
+    if (m_previewMode == previewMode) {
+        return;
+    }
+    m_previewMode = previewMode;
+    // The preview band takes the whole height in preview mode.
+    static_cast<QBoxLayout *>(layout())->setStretchFactor(m_previewBand, previewMode ? 1 : 0);
+    if (!previewMode) {
+        m_textPreview->hide();
+        m_previewMessage->hide();
+        m_details->show();
+        m_previewBand->setVisible(InformationPanelSettings::previewsShown());
+    }
+    adjustWidgetSizes(parentWidget()->width());
+}
+
+void InformationPanelContent::updatePreviewPane(const QString &message)
+{
+    if (!m_previewMode) {
+        return;
+    }
+    m_details->hide();
+    m_previewMessage->setText(message);
+    m_previewMessage->setVisible(!message.isEmpty());
+    m_previewBand->setVisible(message.isEmpty());
+    if (!message.isEmpty()) {
+        m_textPreview->hide();
+        if (m_previewJob) {
+            m_previewJob->kill();
+        }
+        m_preview->stopAnimatedImage();
+    }
 }
 
 void InformationPanelContent::refreshPixmapView()
@@ -316,9 +418,10 @@ void InformationPanelContent::refreshPreview()
     }
 
     m_preview->setCursor(Qt::ArrowCursor);
+    m_textPreview->hide();
     setNameLabelText(m_item.text());
-    m_previewBand->setVisible(InformationPanelSettings::previewsShown());
-    if (InformationPanelSettings::previewsShown()) {
+    m_previewBand->setVisible(previewShown());
+    if (previewShown()) {
         const QUrl itemUrl = m_item.url();
         const bool isSearchUrl = itemUrl.scheme().contains(QLatin1String("search")) && m_item.localPath().isEmpty();
         if (isSearchUrl) {
@@ -328,6 +431,10 @@ void InformationPanelContent::refreshPreview()
             // in the case of a search-URL the URL is not readable for humans
             // (at least not useful to show in the Information Panel)
             m_preview->setPixmap(QIcon::fromTheme(QStringLiteral("baloo")).pixmap(m_preview->height(), m_preview->width()));
+        } else if (showTextPreview()) {
+            m_preview->stopAnimatedImage();
+            m_mediaWidget->hide();
+            m_mediaWidget->clearUrl();
         } else {
             refreshPixmapView();
 
@@ -413,6 +520,7 @@ void InformationPanelContent::showItems(const KFileItemList &items)
     m_mediaWidget->hide();
 
     m_item = KFileItem();
+    updatePreviewPane(i18ndc(shellkitDomain, "@info Preview pane", "No preview available."));
 }
 
 bool InformationPanelContent::eventFilter(QObject *obj, QEvent *event)
@@ -537,7 +645,7 @@ KFileItemList InformationPanelContent::items()
 
 void InformationPanelContent::slotHasVideoChanged(bool hasVideo)
 {
-    m_preview->setVisible(InformationPanelSettings::previewsShown() && !hasVideo);
+    m_preview->setVisible(previewShown() && !hasVideo);
     if (m_preview->isVisible() && m_preview->size().width() != m_preview->pixmap().size().width()) {
         // in case the information panel has been resized when the preview was not displayed
         // we need to refresh its content
@@ -578,8 +686,10 @@ void InformationPanelContent::adjustWidgetSizes(int width)
 
     // try to increase the preview as large as possible
     // shellkit fork: the preview fills the fixed-height band, as in Windows.
-    const int previewHeight = PreviewBandHeight - 2 * PreviewBandMargin;
-    m_preview->setMinimumHeight(previewHeight);
+    // In preview mode it takes the height of the whole pane.
+    const int bandHeight = m_previewMode ? std::max(PreviewBandHeight, parentWidget()->height()) : PreviewBandHeight;
+    const int previewHeight = bandHeight - 2 * PreviewBandMargin;
+    m_preview->setMinimumHeight(m_previewMode ? int(KIconLoader::SizeEnormous) : previewHeight);
     m_preview->setSizeHint(QSize(maxWidth, previewHeight));
 
     // assure that the size of the video player is the same as the preview size

@@ -272,6 +272,8 @@ Q_SIGNALS:
      * Is emitted whenever the filter bar has changed its visibility state.
      */
     void showFilterBarChanged(bool shown);
+    /** shellkit fork: the selection on a page (Home) changed. */
+    void pageSelectionChanged(const KFileItemList &items);
     /**
      * Is emitted whenever a change to the search bar's visibility is invoked. The visibility change might not have actually already taken effect by the time
      * this signal is emitted because typically the showing and hiding is animated.

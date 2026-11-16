@@ -5,10 +5,12 @@
  */
 
 #include "navigationpanel.h"
+#include "jobs/propertiesdialog.h"
 
 #include "dolphinplacesmodelsingleton.h"
 #include "pages/thispcpage.h"
 #include "shellkit.h"
+#include "views/draganddrophelper.h"
 
 #include <KFilePlacesModel>
 #include <KLocalizedString>
@@ -18,6 +20,9 @@
 #include <QApplication>
 #include <QDir>
 #include <QDirIterator>
+#include <QDropEvent>
+#include <QFileInfo>
+#include <QMimeData>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
@@ -159,10 +164,14 @@ public:
         : QTreeView(parent)
     {
         setMouseTracking(true);
+        // shellkit fork: files can be dropped onto folders, as in the Windows navigation pane.
+        setAcceptDrops(true);
+        setDropIndicatorShown(false);
     }
 
 Q_SIGNALS:
     void itemClicked(const QModelIndex &index, Qt::MouseButton button);
+    void urlsDropped(const QUrl &destination, QDropEvent *event);
 
 protected:
     void drawRow(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
@@ -190,6 +199,64 @@ protected:
             painter->restore();
         }
         QTreeView::drawRow(painter, option, index);
+    }
+
+    /** The folder a drop at \a pos goes to: a local folder or the Recycle Bin, as in Windows. */
+    QUrl dropTarget(const QPoint &pos) const
+    {
+        const QModelIndex index = indexAt(pos);
+        if (!index.isValid() || index.data(SeparatorRole).toBool() || index.data(PlaceholderRole).toBool()) {
+            return {};
+        }
+        const QUrl url = index.data(UrlRole).toUrl();
+        if (url.scheme() == QLatin1String("trash") || (url.isLocalFile() && QFileInfo(url.toLocalFile()).isDir())) {
+            return url;
+        }
+        return {};
+    }
+
+    void dragEnterEvent(QDragEnterEvent *event) override
+    {
+        if (event->mimeData()->hasUrls()) {
+            event->acceptProposedAction();
+        } else {
+            event->ignore();
+        }
+    }
+
+    void dragMoveEvent(QDragMoveEvent *event) override
+    {
+        const QPoint pos = event->position().toPoint();
+        const QModelIndex index = dropTarget(pos).isValid() ? indexAt(pos) : QModelIndex();
+        if (index != m_hovered) {
+            m_hovered = index;
+            viewport()->update();
+        }
+        if (index.isValid()) {
+            event->acceptProposedAction();
+        } else {
+            event->ignore();
+        }
+    }
+
+    void dragLeaveEvent(QDragLeaveEvent *event) override
+    {
+        m_hovered = QPersistentModelIndex();
+        viewport()->update();
+        event->accept();
+    }
+
+    void dropEvent(QDropEvent *event) override
+    {
+        m_hovered = QPersistentModelIndex();
+        viewport()->update();
+        const QUrl url = dropTarget(event->position().toPoint());
+        if (!url.isValid()) {
+            event->ignore();
+            return;
+        }
+        event->acceptProposedAction();
+        Q_EMIT urlsDropped(url, event);
     }
 
     void mouseMoveEvent(QMouseEvent *event) override
@@ -267,6 +334,9 @@ NavigationPanel::NavigationPanel(QWidget *parent)
         }
     });
     connect(m_view, &QWidget::customContextMenuRequested, this, &NavigationPanel::showContextMenu);
+    connect(m_view, &NavigationTreeView::urlsDropped, this, [this](const QUrl &destination, QDropEvent *event) {
+        DragAndDropHelper::dropUrls(destination, event, this);
+    });
 
     m_rebuildTimer->setSingleShot(true);
     m_rebuildTimer->setInterval(200);
@@ -572,7 +642,7 @@ void NavigationPanel::showContextMenu(const QPoint &pos)
     if (!isShellkitPageUrl(url)) {
         menu.addSeparator();
         menu.addAction(QIcon::fromTheme(QStringLiteral("document-properties")), i18nc("@action:inmenu", "Properties"), this, [this, url]() {
-            KPropertiesDialog::showDialog(url, this);
+            PropertiesDialog::showProperties(QList<QUrl>{url}, this);
         });
     }
     menu.exec(m_view->viewport()->mapToGlobal(pos));

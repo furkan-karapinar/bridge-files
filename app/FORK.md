@@ -179,6 +179,14 @@ release and apply that diff here; the fork's own changes are listed below.
   toggle with a Cancel button in the footer; the title names the time left.
 - Whether the details are open is remembered (`[CopyDialog] Details`, default open).
 - The job deletes itself when it finishes, so everything the header needs is read in the constructor.
+- Operations at the same time share one window, as in Windows: `CopyProgressDialog` is the window
+  (one for the service, one per File Explorer window for in-process jobs), `CopyProgressItem` one
+  section per job with a line between them; the title is the section's ("12% complete") or "2
+  operations running". Windows 11 has one "Fewer details" for the window, the classic layout one
+  footer with Cancel per section. A finished or cancelled section goes away and the window shrinks.
+- Closing the window (Alt+F4, title bar, Esc) cancels its jobs, as in Windows; closing the File
+  Explorer window does not (the service runs them). Tests: `tools/test-fileops-multi.sh [keep]`,
+  `tools/test-fileops-close.sh window|dialog`.
 
 ### Windows 7 look (optional)
 
@@ -257,3 +265,76 @@ Copy, move, link, duplicate, trash, delete and empty trash run in a separate pro
   `SHELLKIT_FILEOPS_LOCAL=1` forces this.
 - Tests on the VM: `tools/test-fileops.sh`, `tools/test-fileops-close.sh [term|window]`,
   `tools/test-fileops-undo.sh [local]`.
+
+### Replace or Skip Files
+
+`jobs/conflictdialog.*`: `ConflictHandler`, a `KIO::WidgetsAskUserActionHandler` that
+`FileOperationRunner` hands to copy and move jobs (`ShellkitJobUiDelegate`). A file over a file
+asks the Windows way: Windows 11 "Replace the file in the destination", "Skip this file",
+"Compare info for both files" (two check boxes; both kept names the new one "name (2).ext");
+the Windows 7 look or the classic copy dialog shows "Copy and Replace", "Don't copy" and "Copy,
+but keep both files" with the details of each file. "Do this for all conflicts" for several
+items. Folders, resuming and errors still use KIO's dialogs. The job's section of the copy dialog hides while the
+question is open (`CopyProgressDialog::setQuestionShown`). Test: `tools/test-conflict.sh [two]`.
+
+### Properties
+
+`jobs/propertiesdialog.*`: `PropertiesDialog::showProperties` replaces `KPropertiesDialog` for
+local files (view action, Folders panel, navigation tree, Home page, D-Bus `ShowItemProperties`);
+remote places, the trash and the drives on This PC keep the KDE dialog. "General": icon and
+name, type and "Opens with" (Change... is `KOpenWithDialog`), location, size, size on disk
+(`st_blocks`), what a folder contains (counted on a thread), dates, and the Read-only and Hidden
+attributes (Hidden is a leading dot, so it renames). "Security" (one item): owner, group and
+everyone with their read/write/run rights; Edit... opens the KDE dialog. Apply runs `KIO::chmod`,
+then `KIO::moveAs` recorded for undo; several items are handled together with tristate boxes.
+
+### Compressed (zipped) folders
+
+`jobs/compressedfolders.*`: "Compress to ZIP file" runs `CompressJob`, a `KIO::Job` that writes
+the selection into "name.zip" (or "name (2).zip") on a thread with zlib (deflate, UTF-8 names,
+Zip64, Unix modes); the copy dialog shows it ("Compressing N items from X to Y"), pause and
+cancel work and cancel removes the partial file; the new file is then renamed in place
+(`DolphinView::selectAndRename`). "Extract All..." asks for a folder (`ExtractDialog`) and copies
+the archive's contents (KIO archive worker, `zip:/`, `tar:/`) through the file operations
+service, then opens the folder in a new window. `BrowseThroughArchives` defaults to true, so an
+archive opens as a folder. `Dolphin::openNewWindow` starts this program, not "dolphin".
+
+### Address bar menus
+
+`dolphinurlnavigator.cpp` (`NavigatorMenus`, an application event filter): KUrlNavigator's private
+menus are completed when they are polished. The leftmost chevron keeps only the hidden folders
+inside the current place and then lists Home, Gallery, the user folders, This PC, Network and
+the Recycle Bin with icons (the menu opens the URL stored in the chosen action's data); the
+folder menus of the other chevrons get folder icons.
+
+### Search options
+
+`KFileItemModelFilter::SearchOptions` (date modified, kind, size, with the Windows ranges) is part
+of the model filter, so it applies to the results of every search tool; `DolphinView` clears it
+when the view leaves search URLs. The command bar shows "Search options" (rebuilt on every open
+by `DolphinMainWindow::fillSearchOptionsMenu`; choosing the checked item again clears it, and
+"Advanced options > File contents" switches the search URL to content search) and "Close search"
+only while searching (`updateSearchBox`). `dolphinui.rc` version 51.
+
+### Preview pane and shortcuts
+
+The information panel has a preview mode (`InformationPanel::setPreviewMode`): the details are
+hidden, the preview fills the panel, text files show their beginning and folders or multiple
+items show a message. `DolphinMainWindow::setupShellkitPanes` adds "Details pane" (Alt+Shift+P)
+and "Preview pane" (Alt+P) as two modes of the same dock, remembers the mode in the "Shellkit"
+group and adds View > Show. Ctrl+E finds, F4 opens the address bar list (`shellkit_address_list`;
+the terminal panel loses F4), Ctrl+Shift+N is added to `create_dir` only when the frameworks do
+not already give it. `dolphinui.rc` version 52.
+
+Fixes from a test round: the media widget shows the thumbnail again when a video ends; the
+Kind search filter detects the type from the contents and keeps calendars, contacts, mail,
+playlists and scripts out of Document; Extract All names the folder without the whole archive
+suffix (`extractedName`: "a.tar.gz" -> "a"); the address bar's left chevron lists the folders
+whose buttons do not fit (counted from the visible `KUrlNavigatorButton`s, since KIO puts its
+separator before the first button even when that one is hidden); in Windows 7 mode the info
+dock is titled "Preview pane" (its toggle action takes the dock's title) and toggles with
+Alt+P. The Qt style (`plasma/qtstyle`) draws a check column in Windows 11 menus with checkable
+items: a tick for check boxes, a dot for exclusive choices. The Home page reports its selection
+(`ShellkitPage::selectionChanged` → `DolphinViewContainer::pageSelectionChanged`) to the status
+bar and the panels only, and the details pane shows the Type column's name (`shellkitTypeName`)
+instead of the MIME comment.

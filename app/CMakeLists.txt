@@ -125,6 +125,9 @@ set_package_properties(KF6FileMetaData PROPERTIES
                        PURPOSE "For accessing file metadata labels and filesystem metadata"
                       )
 
+# shellkit fork: "Compress to ZIP file" writes zip files with zlib.
+find_package(ZLIB REQUIRED)
+
 find_package(KF6Baloo ${KF6_MIN_VERSION})
 set_package_properties(KF6Baloo PROPERTIES DESCRIPTION "Baloo Core libraries"
                        URL "https://www.kde.org"

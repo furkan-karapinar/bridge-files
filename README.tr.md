@@ -59,7 +59,23 @@ Sistemdeki Dolphin'in yanına kurulur ve ona dokunmaz. Ayar dosyası, uygulama k
 - Kopyalama, taşıma ve silme ayrı küçük bir serviste çalışır; Windows'taki gibi pencereyi
   kapatınca durmaz. Servisi yalnız Dosya Gezgini sormadan kullanır; ondan dosya işlemi isteyen
   başka her program için her istekte "İzin ver / Reddet" penceresi açılır.
-- Başka bir sürücüye bırakılan dosyalar menü sormadan kopyalanır.
+- Başka bir sürücüye bırakılan dosyalar menü sormadan kopyalanır. Dosyalar gezinti bölmesindeki
+  klasörlere de bırakılabilir.
+- Dosya zaten varsa "Dosyaları Değiştir veya Atla" penceresi açılır: değiştir, atla ya da
+  dosyaları yan yana karşılaştırıp hangisinin kalacağını seç.
+- Aynı anda yapılan kopyalamalar tek pencerede, her biri kendi satırında görünür.
+- Yerel dosyalar için Windows tarzı Özellikler penceresi: Genel (tür, birlikte açılan, konum,
+  boyut, diskteki boyut, tarihler, Salt okunur ve Gizli) ve Güvenlik (sahip, grup, herkes).
+- Sıkıştırılmış (zip) klasörler: "ZIP dosyasına sıkıştır", "Tümünü ayıkla…" ve zip dosyasını
+  klasör gibi açma.
+- Adres çubuğu: yol parçaları arasındaki oklar simgeli klasör listeleri açar; ilki Giriş,
+  Galeri, kullanıcı klasörlerin, Bu bilgisayar, Ağ ve Geri Dönüşüm Kutusu'nu listeler.
+- Arama sonuçlarında "Arama seçenekleri" (Değiştirme tarihi, Tür, Boyut, Dosya içerikleri) ve
+  "Aramayı kapat".
+- Ayrıntılar bölmesinin (Alt+Shift+P) yanında önizleme bölmesi (Alt+P), Görünüm > Göster altında.
+  Resimleri, videoları, PDF'leri ve metin dosyalarının metnini gösterir.
+- Windows kısayolları: Ctrl+Shift+N yeni klasör, Ctrl+E arama, F4 adres çubuğu listesi, Alt+D
+  adres çubuğu, Alt+Enter Özellikler.
 
 **Windows 7 görünümü (isteğe bağlı)**
 
@@ -86,7 +102,7 @@ Fedora'da Dolphin'in derlendiği paketlerle pencere çerçevesi başlıklarını
 
 ```bash
 sudo dnf builddep dolphin
-sudo dnf install git cmake ninja-build gcc-c++ extra-cmake-modules kdecoration-devel kf6-kcoreaddons-devel
+sudo dnf install git cmake ninja-build gcc-c++ extra-cmake-modules kdecoration-devel kf6-kcoreaddons-devel zlib-devel
 ```
 
 Başka dağıtımlarda Dolphin'in bağımlılıklarının geliştirme paketlerini kur (KIO, KXmlGui,
@@ -139,14 +155,15 @@ Uygulamanın kendisi sistemindeki renkleri, simgeleri ve yazı tiplerini kullan�
 
 ## Bilinen eksikler
 
-- Bazı KDE pencereleri (Özellikler, ayarlar penceresi) KDE düzeninde kalır.
+- Bazı KDE pencereleri (ayarlar penceresi, Birlikte Aç, uzak konumların ve sürücülerin
+  Özellikler'i) KDE düzeninde kalır.
 - Ağ sayfası yalnız kendini mDNS/DNS-SD ile duyuran ya da bilgisayarınla yakın zamanda konuşan
   aygıtları görür. Windows bilgisayarlar ancak kendilerini bu yolla duyururlarsa görünür.
 - Çöp Kutusunu boşaltırken ilerleme penceresi çıkmaz. Servisteki işlemlerin geri alınması yalnız
   Dosya Gezgini açıkken mümkündür (son pencere kapandıktan yaklaşık bir dakika sonra servis
   kapanır).
-- Windows 7 görünümünde önizleme bölmesi Dolphin düzenindedir. Kitaplıklar gerçek kitaplık
-  değildir, kullanıcı klasörlerine bağlanır.
+- Windows 7 görünümünde Kitaplıklar gerçek kitaplık değildir, kullanıcı klasörlerine bağlanır.
+- Önizleme bölmesi resim, video, PDF ve metin gösterir; diğer dosyalarda simgeleri görünür.
 - Uygulamanın iç adı hâlâ `shellkit-files`: program, ayar dosyası (`shellkit-filesrc`) ve
   uygulama kimliği (`org.shellkit.files`) bu adı taşır. Proje, shellkit adlı daha büyük bir
   çalışmanın parçası olarak başladı.

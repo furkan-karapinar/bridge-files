@@ -10,6 +10,8 @@
 #include <QScrollArea>
 #include <QUrl>
 
+#include <KFileItem>
+
 /**
  * @brief shellkit fork: a page DolphinViewContainer shows in place of the view.
  *
@@ -33,6 +35,8 @@ Q_SIGNALS:
     void folderInNewTab(const QUrl &url);
     /** The content changed after refresh(), so itemCount() did too. */
     void itemCountChanged();
+    /** The selected items changed; pages without a selection never emit it. */
+    void selectionChanged(const KFileItemList &items);
 };
 
 #endif // SHELLKITPAGE_H

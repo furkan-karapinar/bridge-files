@@ -9,6 +9,7 @@
 #include "dolphinmainwindow.h"
 #include "dolphinplacesmodelsingleton.h"
 #include "dolphinviewcontainer.h"
+#include "jobs/compressedfolders.h"
 #include "shellkit.h"
 #include "views/dolphinview.h"
 
@@ -163,17 +164,15 @@ void ShellkitContextMenu::addItemActions()
         }
     }
 
-    // Compressing goes through Ark, as its own "Compress to zip" service menu does.
-    if (properties.isLocal() && !QStandardPaths::findExecutable(QStringLiteral("ark")).isEmpty()) {
-        const QList<QUrl> urls = m_selectedItems.urlList();
-        addAction(QIcon::fromTheme(QStringLiteral("archive-insert")), i18ndc(shellkitDomain, "@action:inmenu", "Compress to ZIP file"), this, [this, urls]() {
-            QStringList arguments{QStringLiteral("--changetofirstpath"), QStringLiteral("--add"), QStringLiteral("--autofilename"), QStringLiteral("zip")};
-            for (const QUrl &url : urls) {
-                arguments.append(url.toLocalFile());
-            }
-            auto job = new KIO::CommandLauncherJob(QStringLiteral("ark"), arguments);
-            job->setUiDelegate(KIO::createDefaultJobUiDelegate(KJobUiDelegate::AutoHandlingEnabled, m_mainWindow));
-            job->start();
+    // Compressed (zipped) folders: written by the File Explorer itself, as in Windows.
+    if (single && CompressedFolders::canExtract(m_item)) {
+        addAction(QIcon::fromTheme(QStringLiteral("archive-extract")), i18ndc(shellkitDomain, "@action:inmenu", "Extract All..."), this, [this]() {
+            m_mainWindow->extractAll(m_item);
+        });
+    }
+    if (properties.isLocal()) {
+        addAction(QIcon::fromTheme(QStringLiteral("archive-insert")), i18ndc(shellkitDomain, "@action:inmenu", "Compress to ZIP file"), this, [this]() {
+            m_mainWindow->compressToZip(m_selectedItems);
         });
     }
     addAction(collection->action(QStringLiteral("copy_location")));

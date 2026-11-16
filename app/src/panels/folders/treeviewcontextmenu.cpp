@@ -6,6 +6,7 @@
  */
 
 #include "treeviewcontextmenu.h"
+#include "jobs/propertiesdialog.h"
 #include "jobs/fileoperations.h"
 
 #include "folderspanel.h"
@@ -209,9 +210,7 @@ void TreeViewContextMenu::deleteItem()
 
 void TreeViewContextMenu::showProperties()
 {
-    KPropertiesDialog *dialog = new KPropertiesDialog(m_fileItem.url(), m_parent);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->show();
+    PropertiesDialog::showProperties(KFileItemList{m_fileItem}, m_parent);
 }
 
 void TreeViewContextMenu::setShowHiddenFiles(bool show)

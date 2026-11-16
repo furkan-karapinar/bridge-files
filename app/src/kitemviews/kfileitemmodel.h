@@ -191,6 +191,10 @@ public:
     bool isFilterCaseSensitive() const;
 
     void setExcludeMimeTypeFilter(const QStringList &filters);
+
+    /** shellkit fork: the Windows search options (Date modified, Kind, Size). */
+    void setSearchOptions(const KFileItemModelFilter::SearchOptions &options);
+    KFileItemModelFilter::SearchOptions searchOptions() const;
     QStringList excludeMimeTypeFilter() const;
 
     struct RoleInfo {
